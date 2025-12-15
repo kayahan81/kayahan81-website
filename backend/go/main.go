@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
-	"github.com/kayahan81/kayahan81-website/backend/go/database"
-	"github.com/kayahan81/kayahan81-website/backend/go/handlers"
-	"github.com/kayahan81/kayahan81-website/backend/go/middleware"
+	"portfolio/database"
+	"portfolio/handlers"
+	"portfolio/middleware"
 )
 
 func main() {
@@ -72,6 +72,10 @@ func main() {
 			protected.POST("/files/upload", handlers.UploadFile)
 			protected.DELETE("/files/:id", handlers.DeleteFile)
 			protected.GET("/files/download/:id", handlers.DownloadFile)
+			protected.POST("/files/upload-multiple", handlers.UploadMultipleFiles)
+			protected.POST("/files/folder", handlers.CreateFolder)
+			protected.GET("/files/stats", handlers.GetStorageStats)
+			protected.GET("/files/preview/:id", handlers.GetFilePreview)
 
 			// Go-скрипты
 			protected.POST("/scripts/run", handlers.RunScript)
@@ -92,7 +96,6 @@ func main() {
 			"message": "Portfolio Backend API",
 			"version": "1.0.0",
 			"author":  "kayahan81",
-			"github":  "https://github.com/kayahan81/kayahan81-website",
 		})
 	})
 
@@ -103,8 +106,6 @@ func main() {
 	}
 
 	log.Printf("🚀 Server starting on port %s", port)
-	log.Printf("📁 Database: %s", os.Getenv("DB_NAME"))
-	log.Printf("👤 Demo user: admin / admin123")
 
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal(err)

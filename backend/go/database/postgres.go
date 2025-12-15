@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/kayahan81/kayahan81-website/backend/go/models"
+	"portfolio/models"
 )
 
 var DB *gorm.DB
@@ -76,9 +76,9 @@ func createDemoData() {
 	if userCount == 0 {
 		// Создаём тестового пользователя
 		demoUser := models.User{
-			Username: "admin",
-			Password: "admin123", // В реальном приложении должен быть хеш!
-			Email:    "admin@portfolio.local",
+			Username: "kayah",
+			Password: "81", // В реальном приложении должен быть хеш!
+			Email:    "kayahan81@yandex.ru",
 		}
 		DB.Create(&demoUser)
 
