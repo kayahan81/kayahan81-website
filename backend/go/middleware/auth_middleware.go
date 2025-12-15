@@ -5,13 +5,14 @@ import (
 	"os"
 	"strings"
 	"time"
-	
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"portfolio-backend/database"
+
+	"github.com/kayahan81/kayahan81-website/backend/go/database"
+	"github.com/kayahan81/kayahan81-website/backend/go/models"
 )
 
-// JWT Claims
 type Claims struct {
 	UserID   uint   `json:"user_id"`
 	Username string `json:"username"`
@@ -21,17 +22,17 @@ type Claims struct {
 // Генерация JWT токена
 func GenerateToken(userID uint, username string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
-	
+
 	claims := &Claims{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "portfolio-backend",
+			Issuer:    "kayahan81-portfolio",
 		},
 	}
-	
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 }
@@ -40,34 +41,33 @@ func GenerateToken(userID uint, username string) (string, error) {
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		
+
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
 		}
-		
-		// Формат: Bearer <token>
+
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
 			c.Abort()
 			return
 		}
-		
+
 		tokenString := parts[1]
 		claims := &Claims{}
-		
+
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
-		
+
 		if err != nil || !token.Valid {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
 		}
-		
+
 		// Проверяем существование пользователя
 		user, err := database.GetUserByID(claims.UserID)
 		if err != nil {
@@ -75,21 +75,23 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		// Сохраняем данные пользователя в контексте
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("user", user)
-		
+
 		c.Next()
 	}
 }
 
 // Получение пользователя из контекста
-func GetUserFromContext(c *gin.Context) (*database.User, bool) {
-	user, exists := c.Get("user")
+func GetUserFromContext(c *gin.Context) (*models.User, bool) {
+	userValue, exists := c.Get("user")
 	if !exists {
 		return nil, false
 	}
-	return user.(*database.User), true
+
+	user, ok := userValue.(*models.User)
+	return user, ok
 }

@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-	
+
 	"gorm.io/gorm"
 )
 
@@ -13,17 +13,13 @@ type Task struct {
 	Description string         `json:"description"`
 	Folder      string         `json:"folder" gorm:"default:'Общее'"`
 	Deadline    *time.Time     `json:"deadline"`
-	Priority    string         `json:"priority" gorm:"default:'medium'"` // high, medium, low
+	Priority    string         `json:"priority" gorm:"default:'medium'"`
 	Completed   bool           `json:"completed" gorm:"default:false"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
-	
-	// Связь
-	User        User           `json:"-" gorm:"foreignKey:UserID"`
 }
 
-// DTO для создания/обновления задачи
 type TaskRequest struct {
 	Title       string     `json:"title" binding:"required"`
 	Description string     `json:"description"`
