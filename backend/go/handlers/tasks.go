@@ -1,115 +1,95 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-
-	"portfolio/database"
-	"portfolio/middleware"
 	"portfolio/models"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-// Получение всех задач пользователя
+// GetTasks - получение списка задач пользователя
 func GetTasks(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Параметры фильтрации
-	completed := c.Query("completed")
-	folder := c.Query("folder")
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
 
 	var tasks []models.Task
-	query := database.DB.Where("user_id = ?", user.ID)
-
-	if completed != "" {
-		if completed == "true" {
-			query = query.Where("completed = ?", true)
-		} else if completed == "false" {
-			query = query.Where("completed = ?", false)
-		}
-	}
-
-	if folder != "" {
-		query = query.Where("folder = ?", folder)
-	}
-
-	// Сортировка
-	sortBy := c.DefaultQuery("sort", "deadline")
-	switch sortBy {
-	case "title":
-		query = query.Order("title")
-	case "created":
-		query = query.Order("created_at DESC")
-	case "priority":
-		query = query.Order("CASE priority WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END")
-	default:
-		query = query.Order("deadline ASC, created_at DESC")
-	}
-
-	if err := query.Find(&tasks).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get tasks"})
+	if err := db.Where("user_id = ?", userID).Find(&tasks).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks: " + err.Error()})
 		return
 	}
-
-	// Статистика
-	var total, completedCount, overdueCount int64
-	database.DB.Model(&models.Task{}).
-		Where("user_id = ?", user.ID).
-		Count(&total)
-
-	database.DB.Model(&models.Task{}).
-		Where("user_id = ? AND completed = ?", user.ID, true).
-		Count(&completedCount)
-
-	// Подсчёт просроченных задач
-	// database.DB.Model(&models.Task{}).
-	// 	Where("user_id = ? AND completed = ? AND deadline < ?",
-	// 		user.ID, false, time.Now()).
-	// 	Count(&overdueCount)
 
 	c.JSON(http.StatusOK, gin.H{
 		"tasks": tasks,
-		"stats": gin.H{
-			"total":     total,
-			"completed": completedCount,
-			"overdue":   overdueCount,
-			"pending":   total - completedCount,
-		},
+		"count": len(tasks),
 	})
 }
 
-// Создание новой задачи
+// GetTask - получение задачи по ID
+func GetTask(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	var task models.Task
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&task).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"task": task})
+}
+
+// CreateTask - создание новой задачи
 func CreateTask(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	var input struct {
+		Title       string `json:"title" binding:"required"`
+		Description string `json:"description"`
+		Folder      string `json:"folder"`
+		Deadline    string `json:"deadline"`
+		Priority    string `json:"priority"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
 
-	var req models.TaskRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	// Устанавливаем значения по умолчанию
+	if input.Folder == "" {
+		input.Folder = "general"
+	}
+	if input.Priority == "" {
+		input.Priority = "medium"
 	}
 
-	// Создаём задачу
 	task := models.Task{
-		UserID:      user.ID,
-		Title:       req.Title,
-		Description: req.Description,
-		Folder:      req.Folder,
-		Deadline:    req.Deadline,
-		Priority:    req.Priority,
-		Completed:   req.Completed,
+		UserID:      userID,
+		Title:       input.Title,
+		Description: input.Description,
+		Folder:      input.Folder,
+		Deadline:    input.Deadline,
+		Priority:    input.Priority,
+		Completed:   false,
 	}
 
-	if err := database.DB.Create(&task).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
+	if err := db.Create(&task).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task: " + err.Error()})
 		return
 	}
 
@@ -119,50 +99,61 @@ func CreateTask(c *gin.Context) {
 	})
 }
 
-// Обновление задачи
+// UpdateTask - обновление задачи
 func UpdateTask(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
 
-	taskID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
-	// Проверяем, существует ли задача и принадлежит ли пользователю
+	var input struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Folder      string `json:"folder"`
+		Deadline    string `json:"deadline"`
+		Priority    string `json:"priority"`
+		Completed   *bool  `json:"completed"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
 	var task models.Task
-	if err := database.DB.Where("id = ? AND user_id = ?", taskID, user.ID).First(&task).Error; err != nil {
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&task).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	var req models.TaskRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	// Обновляем поля
+	if input.Title != "" {
+		task.Title = input.Title
+	}
+	if input.Description != "" {
+		task.Description = input.Description
+	}
+	if input.Folder != "" {
+		task.Folder = input.Folder
+	}
+	if input.Deadline != "" {
+		task.Deadline = input.Deadline
+	}
+	if input.Priority != "" {
+		task.Priority = input.Priority
+	}
+	if input.Completed != nil {
+		task.Completed = *input.Completed
 	}
 
-	// Обновляем задачу
-	updates := map[string]interface{}{
-		"title":       req.Title,
-		"description": req.Description,
-		"folder":      req.Folder,
-		"deadline":    req.Deadline,
-		"priority":    req.Priority,
-		"completed":   req.Completed,
-	}
-
-	if err := database.DB.Model(&task).Updates(updates).Error; err != nil {
+	if err := db.Save(&task).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 		return
 	}
-
-	// Получаем обновлённую задачу
-	database.DB.First(&task, taskID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Task updated successfully",
@@ -170,82 +161,116 @@ func UpdateTask(c *gin.Context) {
 	})
 }
 
-// Удаление задачи
-func DeleteTask(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
+// UpdateTaskStatus - обновление статуса задачи
+func UpdateTaskStatus(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
 
-	taskID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
-	// Проверяем существование задачи
+	var input struct {
+		Completed bool `json:"completed" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
 	var task models.Task
-	if err := database.DB.Where("id = ? AND user_id = ?", taskID, user.ID).First(&task).Error; err != nil {
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&task).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	// Удаляем задачу
-	if err := database.DB.Delete(&task).Error; err != nil {
+	task.Completed = input.Completed
+	if err := db.Save(&task).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Task status updated successfully",
+		"task":    task,
+	})
+}
+
+// DeleteTask - удаление задачи
+func DeleteTask(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	result := db.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Task{})
+	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Task deleted successfully",
-	})
-}
-
-// Получение списка папок с задачами
-func GetTaskFolders(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	type FolderStats struct {
-		Folder     string
-		Total      int64
-		Completed  int64
-		Pending    int64
-		HasOverdue bool
-	}
+	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
+}
+
+// GetFolders - получение списка папок пользователя
+func GetFolders(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
 
 	var folders []string
-	database.DB.Model(&models.Task{}).
-		Where("user_id = ?", user.ID).
-		Distinct().
-		Pluck("folder", &folders)
-
-	var folderStats []FolderStats
-	for _, folder := range folders {
-		var total, completed int64
-
-		database.DB.Model(&models.Task{}).
-			Where("user_id = ? AND folder = ?", user.ID, folder).
-			Count(&total)
-
-		database.DB.Model(&models.Task{}).
-			Where("user_id = ? AND folder = ? AND completed = ?",
-				user.ID, folder, true).
-			Count(&completed)
-
-		folderStats = append(folderStats, FolderStats{
-			Folder:    folder,
-			Total:     total,
-			Completed: completed,
-			Pending:   total - completed,
-		})
+	if err := db.Model(&models.Task{}).
+		Where("user_id = ?", userID).
+		Distinct("folder").
+		Pluck("folder", &folders).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка получения папок"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"folders": folderStats,
+		"folders": folders,
+		"count":   len(folders),
+	})
+}
+
+// CreateFolder - создание новой папки
+func CreateFolder(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	var input struct {
+		Name string `json:"name" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос"})
+		return
+	}
+
+	// Проверяем, существует ли уже такая папка
+	var count int64
+	db.Model(&models.Task{}).
+		Where("user_id = ? AND folder = ?", userID, input.Name).
+		Count(&count)
+
+	if count > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "Папка уже существует"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Папка '%s' создана", input.Name),
+		"folder":  input.Name,
 	})
 }

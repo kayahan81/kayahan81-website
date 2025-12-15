@@ -3,101 +3,140 @@ package main
 import (
 	"log"
 	"os"
-
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
-
 	"portfolio/database"
 	"portfolio/handlers"
 	"portfolio/middleware"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Загружаем переменные окружения
+	// Загружаем .env файл
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using system environment variables")
+		log.Println("No .env file found, using defaults")
 	}
 
-	// Инициализируем базу данных
-	if err := database.InitDB(); err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+	// Инициализация базы данных
+	db, err := database.InitDB()
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
 	}
-	defer database.CloseDB()
 
-	// Настраиваем Gin
-	if os.Getenv("GIN_MODE") == "release" {
-		gin.SetMode(gin.ReleaseMode)
+	if err := database.Migrate(db); err != nil {
+		log.Printf("⚠️ Предупреждение при миграции: %v", err)
+		log.Println("⚠️ Продолжаю работу (таблицы могут уже существовать)")
+		// НЕ завершаем с fatal ошибкой!
 	}
 
 	router := gin.Default()
 
-	// CORS middleware
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
+	// Настройка CORS для разработки
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"http://127.0.0.1:5500",
+			"http://localhost:8080",
+			"http://localhost:5500",
+			"http://localhost:*",
+			"http://127.0.0.1:*",
+			"file://", // Добавьте если открываете через file://
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Disposition"},
+		AllowCredentials: true,
+		MaxAge:           12 * 3600,
+	}))
+	// Статические файлы (фронтенд)
+	router.Static("/frontend", "../frontend")
+	router.StaticFile("/", "../frontend/html/index.html")
+	router.StaticFile("/index.html", "../frontend/html/index.html")
+	router.StaticFile("/tasks.html", "../frontend/html/page/tasks.html")
+	router.StaticFile("/storage.html", "../frontend/html/page/storage.html")
+	router.StaticFile("/scripts.html", "../frontend/html/page/scripts.html")
+	router.StaticFile("/shadowrun.html", "../frontend/html/page/shadowrun.html")
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
-
-	// API маршруты
-	api := router.Group("/api")
+	// Публичные маршруты (без аутентификации, но с БД)
+	public := router.Group("/api")
+	public.Use(middleware.DBMiddleware()) // <-- ДОБАВЬТЕ ЭТУ СТРОЧКУ
 	{
-		// Аутентификация
-		api.POST("/login", handlers.Login)
-		api.POST("/register", handlers.Register)
+		public.POST("/login", handlers.Login)
+		public.POST("/register", handlers.Register)
+		public.GET("/health", func(c *gin.Context) {
+			c.JSON(200, gin.H{"status": "ok", "service": "portfolio-backend"})
+		})
+	}
+
+	// Защищённые маршруты (требуют аутентификации И БД)
+	api := router.Group("/api")
+	api.Use(middleware.DBMiddleware()) // <-- ДОБАВЬТЕ ЭТУ СТРОЧКУ
+	api.Use(middleware.AuthMiddleware())
+	{
+		// Пользователь
+		api.GET("/user", handlers.GetUser)
 		api.POST("/logout", handlers.Logout)
 
-		// Защищённые маршруты
-		protected := api.Group("/")
-		protected.Use(middleware.AuthMiddleware())
+		// Задачи
+		tasks := api.Group("/tasks")
 		{
-			// Пользователь
-			protected.GET("/user", handlers.GetUserInfo)
+			tasks.GET("", handlers.GetTasks)
+			tasks.GET("/:id", handlers.GetTask)
+			tasks.POST("", handlers.CreateTask)
+			tasks.PUT("/:id", handlers.UpdateTask)
+			tasks.DELETE("/:id", handlers.DeleteTask)
+			tasks.PUT("/:id/status", handlers.UpdateTaskStatus)
+			tasks.GET("/folders", handlers.GetFolders)
+			tasks.POST("/folders", handlers.CreateFolder)
+		}
 
-			// Задачи
-			protected.GET("/tasks", handlers.GetTasks)
-			protected.POST("/tasks", handlers.CreateTask)
-			protected.PUT("/tasks/:id", handlers.UpdateTask)
-			protected.DELETE("/tasks/:id", handlers.DeleteTask)
+		// Файлы
+		files := api.Group("/files")
+		{
+			// Сначала общие маршруты, затем динамические
+			files.GET("/folders", handlers.GetFileFolders) // <-- ДОЛЖЕН БЫТЬ ПЕРВЫМ!
+			files.POST("/folders", handlers.CreateFileFolder)
 
-			// Файлы
-			protected.GET("/files", handlers.GetFiles)
-			protected.POST("/files/upload", handlers.UploadFile)
-			protected.DELETE("/files/:id", handlers.DeleteFile)
-			protected.GET("/files/download/:id", handlers.DownloadFile)
-			protected.POST("/files/upload-multiple", handlers.UploadMultipleFiles)
-			protected.POST("/files/folder", handlers.CreateFolder)
-			protected.GET("/files/stats", handlers.GetStorageStats)
-			protected.GET("/files/preview/:id", handlers.GetFilePreview)
+			// Затем остальные
+			files.GET("", handlers.GetFiles)
+			files.GET("/:id", handlers.GetFile)
+			files.POST("/upload", handlers.UploadFile)
+			files.DELETE("/:id", handlers.DeleteFile)
+			files.GET("/download/:id", handlers.DownloadFile)
+			files.PUT("/:id/rename", handlers.RenameFile)
+			files.PUT("/:id/move", handlers.MoveFile)
+		}
 
-			// Go-скрипты
-			protected.POST("/scripts/run", handlers.RunScript)
-			protected.GET("/scripts", handlers.GetScripts)
-			protected.POST("/scripts", handlers.SaveScript)
-			protected.DELETE("/scripts/:id", handlers.DeleteScript)
+		// Скрипты
+		scripts := api.Group("/scripts")
+		{
+			scripts.POST("/run", handlers.RunScript)
+			scripts.GET("", handlers.GetScripts)
+			scripts.GET("/:id", handlers.GetScript)
+			scripts.POST("", handlers.SaveScript)
+			scripts.DELETE("/:id", handlers.DeleteScript)
+		}
 
-			// Shadowrun справочник
-			protected.GET("/shadowrun/search", handlers.SearchShadowrun)
-			protected.GET("/shadowrun/entry/:id", handlers.GetShadowrunEntry)
-			protected.GET("/shadowrun/categories", handlers.GetCategories)
+		// Shadowrun
+		shadowrun := api.Group("/shadowrun")
+		{
+			shadowrun.GET("/entries", handlers.GetShadowrunEntries)
+			shadowrun.GET("/categories", handlers.GetShadowrunCategories)
+			shadowrun.GET("/entries/:id", handlers.GetShadowrunEntry)
+			shadowrun.GET("/tags", handlers.GetShadowrunTags)
+			shadowrun.POST("/entries", handlers.AddShadowrunEntry)
+			shadowrun.PUT("/entries/:id", handlers.UpdateShadowrunEntry)
+			shadowrun.DELETE("/entries/:id", handlers.DeleteShadowrunEntry)
 		}
 	}
 
-	// Корневой маршрут для проверки
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "Portfolio Backend API",
-			"version": "1.0.0",
-			"author":  "kayahan81",
-		})
-	})
+	// Статические файлы загрузок
+	uploadsDir := "./uploads"
+	if _, err := os.Stat(uploadsDir); os.IsNotExist(err) {
+		os.MkdirAll(uploadsDir, 0755)
+	}
+	router.Static("/uploads", uploadsDir)
 
 	// Запуск сервера
 	port := os.Getenv("PORT")
@@ -105,9 +144,11 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("🚀 Server starting on port %s", port)
+	log.Printf("🚀 Сервер запущен на http://localhost:%s", port)
+	log.Printf("📁 Фронтенд доступен по http://localhost:%s/index.html", port)
+	log.Println("👤 Демо пользователь: admin / admin123")
 
 	if err := router.Run(":" + port); err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to start server:", err)
 	}
 }

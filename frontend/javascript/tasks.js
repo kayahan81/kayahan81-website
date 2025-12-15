@@ -1,163 +1,123 @@
 /**
- * Р¤Р°Р№Р» JavaScript РґР»СЏ СЃС‚СЂР°РЅРёС†С‹ Р·Р°РґР°С‡
+ * Файл JavaScript для страницы задач
  */
 
-// Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ Р·Р°РґР°С‡
+// Глобальные переменные для хранения задач
 let tasks = [];
 
-// РћСЃРЅРѕРІРЅР°СЏ С„СѓРЅРєС†РёСЏ РїСЂРё Р·Р°РіСЂСѓР·РєРµ СЃС‚СЂР°РЅРёС†С‹
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('РЎС‚СЂР°РЅРёС†Р° Р·Р°РґР°С‡ Р·Р°РіСЂСѓР¶РµРЅР°');
+// Основная функция при загрузке страницы
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Страница задач загружена');
     
-    // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІСЃРµС… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
+    // Проверяем авторизацию
+    const user = await checkAuth();
+    if (!user) return;
+    
+    // Инициализация всех компонентов
     initCalendar();
-    loadDemoTasks();
+    await loadTasks();
     setupButtons();
     setupEventListeners();
     updateStats();
 });
 
-// 1. РРќРР¦РРђР›РР—РђР¦РРЇ РљРђР›Р•РќР”РђР РЇ
-function initCalendar() {
-    const calendarBtn = document.getElementById('show-calendar-btn');
-    const closeBtn = document.getElementById('close-calendar-btn');
-    const modal = document.getElementById('calendar-modal');
-    
-    if (!calendarBtn || !modal) {
-        console.error('Р­Р»РµРјРµРЅС‚С‹ РєР°Р»РµРЅРґР°СЂСЏ РЅРµ РЅР°Р№РґРµРЅС‹');
-        return;
+// ==================== API ФУНКЦИИ ====================
+
+/**
+ * Загрузка задач с сервера
+ */
+async function loadTasks() {
+    try {
+        const response = await apiRequest('/tasks', 'GET');
+        tasks = response.tasks || [];
+        renderTasks();
+        updateStats();
+    } catch (error) {
+        console.error('Ошибка загрузки задач:', error);
+        showNotification('Ошибка загрузки задач', 'error');
+        loadDemoTasks();
     }
-    
-    // РћС‚РєСЂС‹С‚РёРµ РєР°Р»РµРЅРґР°СЂСЏ
-    calendarBtn.addEventListener('click', function() {
-        console.log('РћС‚РєСЂС‹С‚РёРµ РєР°Р»РµРЅРґР°СЂСЏ');
-        modal.style.display = 'flex';
-        renderCalendar();
-    });
-    
-    // Р—Р°РєСЂС‹С‚РёРµ РєР°Р»РµРЅРґР°СЂСЏ С‡РµСЂРµР· РєСЂРµСЃС‚РёРє
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-            modal.style.display = 'none';
-        });
-    }
-    
-    // Р—Р°РєСЂС‹С‚РёРµ РєР°Р»РµРЅРґР°СЂСЏ РїСЂРё РєР»РёРєРµ РІРЅРµ РѕРєРЅР°
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
 }
 
-// 2. Р Р•РќР”Р•Р РРќР“ РљРђР›Р•РќР”РђР РЇ
-function renderCalendar() {
-    const placeholder = document.getElementById('calendar-placeholder');
-    if (!placeholder) return;
-    
-    const today = new Date();
-    const nearestDeadline = getNearestDeadline();
-    
-    let calendarHTML = `
-        <div class="calendar-view">
-            
-            <div class="calendar-info">
-                <p><strong>РЎРµРіРѕРґРЅСЏ:</strong> ${formatDate(today)}</p>
-                <p><strong>Р‘Р»РёР¶Р°Р№С€РёР№ РґРµРґР»Р°Р№РЅ:</strong> ${nearestDeadline}</p>
-            </div>
-            <div class="calendar-grid">
-    `;
-    
-    // РЎРѕР·РґР°С‘Рј РєР°Р»РµРЅРґР°СЂСЊ РЅР° С‚РµРєСѓС‰РёР№ РјРµСЃСЏС†
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDay = new Date(year, month, 1).getDay();
-    
-    // Р—Р°РіРѕР»РѕРІРєРё РґРЅРµР№ РЅРµРґРµР»Рё
-    const daysOfWeek = ['РџРЅ', 'Р’С‚', 'РЎСЂ', 'Р§С‚', 'РџС‚', 'РЎР±', 'Р’СЃ'];
-    daysOfWeek.forEach(day => {
-        calendarHTML += `<div class="calendar-header">${day}</div>`;
-    });
-    
-    // РџСѓСЃС‚С‹Рµ РєР»РµС‚РєРё РґРѕ РїРµСЂРІРѕРіРѕ РґРЅСЏ РјРµСЃСЏС†Р°
-    for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
-        calendarHTML += `<div class="calendar-day empty"></div>`;
+/**
+ * Создание новой задачи
+ */
+async function createTask(taskData) {
+    try {
+        const response = await apiRequest('/tasks', 'POST', taskData);
+        await loadTasks();
+        showNotification('Задача создана успешно', 'success');
+        return response.task;
+    } catch (error) {
+        showNotification(error.message || 'Ошибка создания задачи', 'error');
+        throw error;
     }
-    
-    // Р”РЅРё РјРµСЃСЏС†Р°
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const hasDeadline = checkDeadlineForDate(dateStr);
-        const isToday = day === today.getDate();
-        
-        let dayClass = 'calendar-day';
-        if (isToday) dayClass += ' today';
-        if (hasDeadline) dayClass += ' deadline-day';
-        
-        calendarHTML += `
-            <div class="${dayClass}">
-                ${day}
-                ${hasDeadline ? '<div class="deadline-dot"></div>' : ''}
-            </div>
-        `;
-    }
-    
-    calendarHTML += `
-            </div>
-            <div class="calendar-legend">
-                <div class="legend-item">
-                    <div class="deadline-dot"></div>
-                    <span>Р•СЃС‚СЊ РґРµРґР»Р°Р№РЅС‹</span>
-                </div>
-                <div class="legend-item">
-                    <div class="today-marker"></div>
-                    <span>РЎРµРіРѕРґРЅСЏ</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    placeholder.innerHTML = calendarHTML;
 }
 
-// 3. Р—РђР“Р РЈР—РљРђ Р”Р•РњРћ-Р—РђР”РђР§
+/**
+ * Обновление задачи
+ */
+async function updateTask(taskId, updates) {
+    try {
+        await apiRequest(`/tasks/${taskId}`, 'PUT', updates);
+        await loadTasks();
+        showNotification('Задача обновлена успешно', 'success');
+    } catch (error) {
+        showNotification(error.message || 'Ошибка обновления задачи', 'error');
+        throw error;
+    }
+}
+
+/**
+ * Удаление задачи
+ */
+async function deleteTask(taskId) {
+    if (!confirm('Вы уверены, что хотите удалить эту задачу?')) return;
+    
+    try {
+        await apiRequest(`/tasks/${taskId}`, 'DELETE');
+        await loadTasks();
+        showNotification('Задача удалена успешно', 'success');
+    } catch (error) {
+        showNotification(error.message || 'Ошибка удаления задачи', 'error');
+        throw error;
+    }
+}
+
+/**
+ * Переключение статуса задачи
+ */
+async function toggleTaskStatus(taskId, completed) {
+    try {
+        await apiRequest(`/tasks/${taskId}/status`, 'PUT', { completed });
+    } catch (error) {
+        console.error('Ошибка обновления статуса:', error);
+    }
+}
+
+// ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
+
+/**
+ * Загрузка демо-задач (резервный вариант)
+ */
 function loadDemoTasks() {
     tasks = [
         {
             id: 1,
-            title: 'Р’С‹РїРѕР»РЅРёС‚СЊ Р·Р°РґР°РЅРёРµ в„–23',
-            folder: 'РњР°С‚РµРјР°С‚РёРєР°',
+            title: 'Выполнить задание №23',
+            folder: 'Математика',
             deadline: '2024-11-07',
             priority: 'high',
-            description: 'Р РµС€РёС‚СЊ Р·Р°РґР°С‡Рё РїРѕ РјР°С‚РµРјР°С‚РёС‡РµСЃРєРѕРјСѓ Р°РЅР°Р»РёР·Сѓ, СЃС‚СЂР°РЅРёС†С‹ 45-48',
+            description: 'Решить задачи по математическому анализу, страницы 45-48',
             completed: false
         },
         {
             id: 2,
-            title: 'РЎРґРµР»Р°С‚СЊ РїСЂРµР·РµРЅС‚Р°С†РёСЋ РїСЂРѕРµРєС‚Р°',
-            folder: 'Р Р°Р±РѕС‚Р°',
+            title: 'Сделать презентацию проекта',
+            folder: 'Работа',
             deadline: '2024-11-10',
             priority: 'medium',
-            description: 'РџРѕРґРіРѕС‚РѕРІРёС‚СЊ СЃР»Р°Р№РґС‹ РґР»СЏ РѕС‚С‡С‘С‚Р° Рѕ РїСЂРѕРґРµР»Р°РЅРЅРѕР№ СЂР°Р±РѕС‚Рµ',
-            completed: false
-        },
-        {
-            id: 3,
-            title: 'РљСѓРїРёС‚СЊ РїСЂРѕРґСѓРєС‚С‹',
-            folder: 'Р›РёС‡РЅРѕРµ',
-            deadline: '2024-11-05',
-            priority: 'low',
-            description: 'РњРѕР»РѕРєРѕ, С…Р»РµР±, СЏР№С†Р°, РѕРІРѕС‰Рё',
-            completed: true
-        },
-        {
-            id: 4,
-            title: 'РџРѕРґРіРѕС‚РѕРІРёС‚СЊСЃСЏ Рє СЃРѕР±РµСЃРµРґРѕРІР°РЅРёСЋ',
-            folder: 'Р Р°Р±РѕС‚Р°',
-            deadline: '2024-11-15',
-            priority: 'high',
-            description: 'РџРѕРІС‚РѕСЂРёС‚СЊ Р°Р»РіРѕСЂРёС‚РјС‹ Рё СЃС‚СЂСѓРєС‚СѓСЂС‹ РґР°РЅРЅС‹С…',
+            description: 'Подготовить слайды для отчёта о проделанной работе',
             completed: false
         }
     ];
@@ -165,7 +125,9 @@ function loadDemoTasks() {
     renderTasks();
 }
 
-// 4. РћРўРћР‘Р РђР–Р•РќРР• Р—РђР”РђР§
+/**
+ * Отображение задач
+ */
 function renderTasks() {
     const tasksContainer = document.getElementById('tasks-container');
     if (!tasksContainer) return;
@@ -190,7 +152,7 @@ function renderTasks() {
                     <h4 class="task-title">${task.title}</h4>
                     <div class="task-meta">
                         <span class="task-folder">
-                            <i class="fas fa-folder"></i> ${task.folder}
+                            <i class="fas fa-folder"></i> ${task.folder || 'Без папки'}
                         </span>
                         <span class="task-deadline">
                             <i class="fas fa-calendar"></i> ${formattedDeadline}
@@ -200,7 +162,7 @@ function renderTasks() {
                         </span>
                     </div>
                 </div>
-                <div class="task-description">${task.description}</div>
+                <div class="task-description">${task.description || ''}</div>
             </div>
             <div class="task-actions">
                 <button class="task-btn edit-btn" onclick="editTask(${task.id})">
@@ -212,11 +174,11 @@ function renderTasks() {
             </div>
         `;
         
-        // Р”РѕР±Р°РІР»СЏРµРј РѕР±СЂР°Р±РѕС‚С‡РёРє С‡РµРєР±РѕРєСЃР°
         const checkbox = taskElement.querySelector(`#task-${task.id}`);
-        checkbox.addEventListener('change', function() {
+        checkbox.addEventListener('change', async function() {
             task.completed = this.checked;
             taskElement.classList.toggle('completed', this.checked);
+            await toggleTaskStatus(task.id, this.checked);
             updateStats();
         });
         
@@ -224,30 +186,220 @@ function renderTasks() {
     });
 }
 
-// 5. РќРђРЎРўР РћР™РљРђ РљРќРћРџРћРљ
+/**
+ * Редактирование задачи
+ */
+async function editTask(taskId) {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    const newTitle = prompt('Новое название задачи:', task.title);
+    if (newTitle !== null) {
+        await updateTask(taskId, { title: newTitle });
+    }
+}
+
+/**
+ * Открытие модального окна создания задачи
+ */
+function openTaskModal() {
+    const modalHTML = `
+        <div id="task-modal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        ">
+            <div style="
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                width: 400px;
+                max-width: 90%;
+            ">
+                <h3 style="margin-bottom: 20px;">Новая задача</h3>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px;">Название:</label>
+                    <input type="text" id="task-title" style="width: 100%; padding: 8px;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px;">Описание:</label>
+                    <textarea id="task-desc" style="width: 100%; padding: 8px; height: 100px;"></textarea>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px;">Дедлайн:</label>
+                    <input type="date" id="task-deadline" style="width: 100%; padding: 8px;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px;">Приоритет:</label>
+                    <select id="task-priority" style="width: 100%; padding: 8px;">
+                        <option value="low">Низкий</option>
+                        <option value="medium" selected>Средний</option>
+                        <option value="high">Высокий</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="closeTaskModal()" style="padding: 8px 16px;">Отмена</button>
+                    <button onclick="saveNewTask()" style="padding: 8px 16px; background: #4CAF50; color: white;">Создать</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+/**
+ * Закрытие модального окна
+ */
+function closeTaskModal() {
+    const modal = document.getElementById('task-modal');
+    if (modal) modal.remove();
+}
+
+/**
+ * Сохранение новой задачи
+ */
+async function saveNewTask() {
+    const title = document.getElementById('task-title').value;
+    const description = document.getElementById('task-desc').value;
+    const deadline = document.getElementById('task-deadline').value;
+    const priority = document.getElementById('task-priority').value;
+    
+    if (!title) {
+        showNotification('Введите название задачи', 'error');
+        return;
+    }
+    
+    await createTask({
+        title,
+        description,
+        deadline: deadline || new Date().toISOString().split('T')[0],
+        priority,
+        folder: 'general'
+    });
+    
+    closeTaskModal();
+}
+
+// ==================== КАЛЕНДАРЬ ====================
+
+function initCalendar() {
+    const calendarBtn = document.getElementById('show-calendar-btn');
+    const closeBtn = document.getElementById('close-calendar-btn');
+    const modal = document.getElementById('calendar-modal');
+    
+    if (!calendarBtn || !modal) return;
+    
+    calendarBtn.addEventListener('click', function() {
+        modal.style.display = 'flex';
+        renderCalendar();
+    });
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+    }
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+function renderCalendar() {
+    const placeholder = document.getElementById('calendar-placeholder');
+    if (!placeholder) return;
+    
+    const today = new Date();
+    const nearestDeadline = getNearestDeadline();
+    
+    let calendarHTML = `
+        <div class="calendar-view">
+            <div class="calendar-info">
+                <p><strong>Сегодня:</strong> ${formatDate(today)}</p>
+                <p><strong>Ближайший дедлайн:</strong> ${nearestDeadline}</p>
+            </div>
+            <div class="calendar-grid">
+    `;
+    
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    
+    const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    daysOfWeek.forEach(day => {
+        calendarHTML += `<div class="calendar-header">${day}</div>`;
+    });
+    
+    for (let i = 0; i < (firstDay === 0 ? 6 : firstDay - 1); i++) {
+        calendarHTML += `<div class="calendar-day empty"></div>`;
+    }
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const hasDeadline = checkDeadlineForDate(dateStr);
+        const isToday = day === today.getDate();
+        
+        let dayClass = 'calendar-day';
+        if (isToday) dayClass += ' today';
+        if (hasDeadline) dayClass += ' deadline-day';
+        
+        calendarHTML += `
+            <div class="${dayClass}">
+                ${day}
+                ${hasDeadline ? '<div class="deadline-dot"></div>' : ''}
+            </div>
+        `;
+    }
+    
+    calendarHTML += `
+            </div>
+            <div class="calendar-legend">
+                <div class="legend-item">
+                    <div class="deadline-dot"></div>
+                    <span>Есть дедлайны</span>
+                </div>
+                <div class="legend-item">
+                    <div class="today-marker"></div>
+                    <span>Сегодня</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    placeholder.innerHTML = calendarHTML;
+}
+
+// ==================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ====================
+
 function setupButtons() {
-    // РљРЅРѕРїРєР° СЃРѕР·РґР°РЅРёСЏ Р·Р°РґР°С‡Рё
     const newTaskBtn = document.getElementById('new-task-btn');
     if (newTaskBtn) {
         newTaskBtn.addEventListener('click', openTaskModal);
     }
     
-    // РљРЅРѕРїРєР° СЃРѕР·РґР°РЅРёСЏ РїР°РїРєРё
     const newFolderBtn = document.getElementById('new-folder-btn');
     if (newFolderBtn) {
         newFolderBtn.addEventListener('click', function() {
-            const folderName = prompt('Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ РїР°РїРєРё:');
+            const folderName = prompt('Введите название папки:');
             if (folderName) {
-                alert(`РџР°РїРєР° "${folderName}" СЃРѕР·РґР°РЅР°!`);
-                // Р—РґРµСЃСЊ Р±СѓРґРµС‚ Р»РѕРіРёРєР° СЃРѕР·РґР°РЅРёСЏ РїР°РїРєРё
+                showNotification(`Папка "${folderName}" создана!`, 'success');
             }
         });
     }
 }
 
-// 6. РќРђРЎРўР РћР™РљРђ Р’РЎР•РҐ РћР‘Р РђР‘РћРўР§РРљРћР’
 function setupEventListeners() {
-    // РЎРѕСЂС‚РёСЂРѕРІРєР°
     const sortSelect = document.getElementById('sort-select');
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
@@ -255,7 +407,6 @@ function setupEventListeners() {
         });
     }
     
-    // Р¤РёР»СЊС‚СЂС‹
     document.querySelectorAll('.sidebar-btn[data-filter]').forEach(btn => {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.sidebar-btn[data-filter]').forEach(b => 
@@ -265,42 +416,27 @@ function setupEventListeners() {
             filterTasks(this.getAttribute('data-filter'));
         });
     });
-    
-    // РџРµСЂРµРєР»СЋС‡РµРЅРёРµ РІРёРґР°
-    document.querySelectorAll('.view-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.view-btn').forEach(b => 
-                b.classList.remove('active')
-            );
-            this.classList.add('active');
-            // Р—РґРµСЃСЊ РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РІРёРґР° СЃРїРёСЃРєР°/СЃРµС‚РєРё
-        });
-    });
 }
 
-// 7. РћР‘РќРћР’Р›Р•РќРР• РЎРўРђРўРРЎРўРРљР
 function updateStats() {
-    // РџРѕРґСЃС‡С‘С‚ Р°РєС‚РёРІРЅС‹С… Р·Р°РґР°С‡
     const activeTasks = tasks.filter(task => !task.completed).length;
     const tasksCountElement = document.getElementById('tasks-count');
     if (tasksCountElement) {
         tasksCountElement.textContent = activeTasks;
     }
     
-    // РџРѕРёСЃРє Р±Р»РёР¶Р°Р№С€РµРіРѕ РґРµРґР»Р°Р№РЅР°
     const nearestDeadlineElement = document.getElementById('nearest-deadline');
     if (nearestDeadlineElement) {
         nearestDeadlineElement.textContent = getNearestDeadline();
     }
 }
 
-// 8. РџРћРРЎРљ Р‘Р›РР–РђР™РЁР•Р“Рћ Р”Р•Р”Р›РђР™РќРђ
 function getNearestDeadline() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     const upcomingTasks = tasks
-        .filter(task => !task.completed)
+        .filter(task => !task.completed && task.deadline)
         .map(task => ({
             ...task,
             deadlineDate: new Date(task.deadline)
@@ -312,10 +448,9 @@ function getNearestDeadline() {
         return formatDate(upcomingTasks[0].deadlineDate);
     }
     
-    return 'вЂ”';
+    return '—';
 }
 
-// 9. РџР РћР’Р•Р РљРђ Р”Р•Р”Р›РђР™РќРћР’ РќРђ Р”РђРўРЈ
 function checkDeadlineForDate(dateStr) {
     return tasks.some(task => 
         !task.completed && 
@@ -323,55 +458,52 @@ function checkDeadlineForDate(dateStr) {
     );
 }
 
-// 10. Р’РЎРџРћРњРћР“РђРўР•Р›Р¬РќР«Р• Р¤РЈРќРљР¦РР
 function formatDate(date) {
+    if (!date) return '—';
     return date.toLocaleDateString('ru-RU', {
         day: 'numeric',
         month: 'long'
     });
 }
 
+// Получение приоритета текстом
 function getPriorityText(priority) {
     const priorityMap = {
-        'high': 'Р’С‹СЃРѕРєРёР№',
-        'medium': 'РЎСЂРµРґРЅРёР№',
-        'low': 'РќРёР·РєРёР№'
+        'high': 'Высокий',
+        'medium': 'Средний',
+        'low': 'Низкий'
     };
     return priorityMap[priority] || priority;
 }
 
-// 11. РћРЎРќРћР’РќР«Р• Р¤РЈРќРљР¦РР Р”Р›РЇ РљРќРћРџРћРљ
-function editTask(taskId) {
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-        const newTitle = prompt('РќРѕРІРѕРµ РЅР°Р·РІР°РЅРёРµ Р·Р°РґР°С‡Рё:', task.title);
-        if (newTitle !== null) {
-            task.title = newTitle;
-            renderTasks();
-            updateStats();
-        }
+// Форматирование даты
+function formatDate(date) {
+    if (!date || !(date instanceof Date) || isNaN(date)) {
+        return '—';
     }
+    return date.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
 }
-
-function deleteTask(taskId) {
-    if (confirm('Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ СЌС‚Сѓ Р·Р°РґР°С‡Сѓ?')) {
-        tasks = tasks.filter(task => task.id !== taskId);
-        renderTasks();
-        updateStats();
-    }
-}
-
-function openTaskModal() {
-    alert('Р—РґРµСЃСЊ Р±СѓРґРµС‚ С„РѕСЂРјР° СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РґР°С‡Рё');
-    // Р’ СЂРµР°Р»СЊРЅРѕРј РїСЂРѕРµРєС‚Рµ Р·РґРµСЃСЊ Р±СѓРґРµС‚ РјРѕРґР°Р»СЊРЅРѕРµ РѕРєРЅРѕ
-}
-
 function sortTasks(criteria) {
-    console.log(`РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ: ${criteria}`);
-    // Р—РґРµСЃСЊ Р±СѓРґРµС‚ Р»РѕРіРёРєР° СЃРѕСЂС‚РёСЂРѕРІРєРё
+    switch(criteria) {
+        case 'deadline':
+            tasks.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+            break;
+        case 'priority':
+            const priorityOrder = { high: 1, medium: 2, low: 3 };
+            tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+            break;
+        case 'title':
+            tasks.sort((a, b) => a.title.localeCompare(b.title));
+            break;
+    }
+    
+    renderTasks();
 }
 
 function filterTasks(filterType) {
-    console.log(`Р¤РёР»СЊС‚СЂ: ${filterType}`);
-    // Р—РґРµСЃСЊ Р±СѓРґРµС‚ Р»РѕРіРёРєР° С„РёР»СЊС‚СЂР°С†РёРё
+    console.log(`Фильтр: ${filterType}`);
 }

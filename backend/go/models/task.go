@@ -7,24 +7,15 @@ import (
 )
 
 type Task struct {
-	ID          uint           `json:"id" gorm:"primaryKey"`
-	UserID      uint           `json:"user_id" gorm:"not null"`
-	Title       string         `json:"title" gorm:"not null"`
-	Description string         `json:"description"`
-	Folder      string         `json:"folder" gorm:"default:'Общее'"`
-	Deadline    *time.Time     `json:"deadline"`
-	Priority    string         `json:"priority" gorm:"default:'medium'"`
-	Completed   bool           `json:"completed" gorm:"default:false"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	UserID      uint           `gorm:"not null" json:"user_id"`
+	Title       string         `gorm:"size:255;not null" json:"title"`
+	Description string         `gorm:"type:text" json:"description"`
+	Folder      string         `gorm:"size:100;default:'general'" json:"folder"`
+	Deadline    string         `gorm:"size:20" json:"deadline"`
+	Priority    string         `gorm:"size:20;default:'medium'" json:"priority"`
+	Completed   bool           `gorm:"default:false" json:"completed"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
-}
-
-type TaskRequest struct {
-	Title       string     `json:"title" binding:"required"`
-	Description string     `json:"description"`
-	Folder      string     `json:"folder"`
-	Deadline    *time.Time `json:"deadline"`
-	Priority    string     `json:"priority"`
-	Completed   bool       `json:"completed"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }

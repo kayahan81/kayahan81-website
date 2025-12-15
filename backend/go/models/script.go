@@ -7,16 +7,16 @@ import (
 )
 
 type Script struct {
-	ID         uint           `json:"id" gorm:"primaryKey"`
-	UserID     uint           `json:"user_id" gorm:"not null"`
-	Name       string         `json:"name" gorm:"not null"`
-	Code       string         `json:"code" gorm:"type:text;not null"`
-	Language   string         `json:"language" gorm:"default:'go'"`
-	Output     string         `json:"output" gorm:"type:text"`
-	ExecutedAt *time.Time     `json:"executed_at"`
+	ID         uint           `gorm:"primaryKey" json:"id"`
+	UserID     uint           `gorm:"not null" json:"user_id"`
+	Name       string         `gorm:"size:255" json:"name"`
+	Code       string         `gorm:"type:text" json:"code"`
+	Language   string         `gorm:"size:50;default:'go'" json:"language"`
+	Output     string         `gorm:"type:text" json:"output"`
+	ExecutedAt *time.Time     `json:"executed_at,omitempty"` // Изменено на omitempty
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
+	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type RunScriptRequest struct {

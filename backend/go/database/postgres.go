@@ -6,40 +6,68 @@ import (
 	"os"
 	"time"
 
+	"portfolio/models"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-
-	"portfolio/models"
 )
 
 var DB *gorm.DB
 
-func InitDB() error {
-	// Формируем строку подключения
+func InitDB() (*gorm.DB, error) {
+	dbHost := getEnv("DB_HOST", "localhost")
+	dbUser := getEnv("DB_USER", "postgres")
+	dbPassword := getEnv("DB_PASSWORD", "postgres")
+	dbName := getEnv("DB_NAME", "portfolio_db")
+	dbPort := getEnv("DB_PORT", "5432")
+	dbSSLMode := getEnv("DB_SSLMODE", "disable")
+
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_SSLMODE"),
+		dbHost, dbUser, dbPassword, dbName, dbPort, dbSSLMode,
 	)
 
-	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
+	log.Printf("🔗 Подключаюсь к PostgreSQL: %s@%s/%s", dbUser, dbHost, dbName)
 
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		return nil, fmt.Errorf("❌ Ошибка подключения: %v", err)
 	}
 
-	log.Println("✅ Database connection established")
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
 
-	// Автомиграция моделей
-	err = DB.AutoMigrate(
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	DB = db
+	log.Println("✅ Подключение к PostgreSQL успешно")
+	return db, nil
+}
+
+func Migrate(db *gorm.DB) error {
+	log.Println("🔧 Проверяю структуру базы данных...")
+
+	// Проверяем существование таблиц
+	tables := []string{"users", "tasks", "files", "scripts", "shadowrun_entries"}
+
+	for _, table := range tables {
+		var exists bool
+		db.Raw("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = ?)", table).Scan(&exists)
+
+		if exists {
+			log.Printf("✅ Таблица '%s' уже существует", table)
+		} else {
+			log.Printf("📝 Таблица '%s' не найдена, создаю...", table)
+		}
+	}
+
+	// Безопасный AutoMigrate - только для недостающих таблиц
+	log.Println("📝 Выполняю безопасную миграцию...")
+	err := db.AutoMigrate(
 		&models.User{},
 		&models.Task{},
 		&models.File{},
@@ -48,105 +76,47 @@ func InitDB() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("failed to migrate database: %w", err)
+		log.Printf("⚠️ Предупреждение при миграции (можно игнорировать если таблицы уже созданы): %v", err)
+		// НЕ завершаем с ошибкой - продолжаем работу
 	}
 
-	log.Println("✅ Database tables created")
+	// Проверяем наличие пользователей
+	var userCount int64
+	db.Model(&models.User{}).Count(&userCount)
+	log.Printf("👤 Найдено пользователей: %d", userCount)
 
-	// Создаём демо-данные если база пуста
-	createDemoData()
+	if userCount == 0 {
+		log.Println("➕ Создаю демо-пользователя 'admin'...")
 
+		// Хеш пароля "admin123"
+		hashedPassword := "$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTV6UiC"
+
+		demoUser := models.User{
+			Username:     "admin",
+			Email:        "admin@example.com",
+			Password:     hashedPassword,
+			StorageUsed:  0,
+			StorageQuota: 52428800, // 50MB
+		}
+
+		result := db.Create(&demoUser)
+		if result.Error != nil {
+			log.Printf("⚠️ Не удалось создать пользователя: %v", result.Error)
+		} else {
+			log.Println("✅ Демо-пользователь создан: admin / admin123")
+		}
+	} else {
+		log.Println("✅ Пользователи уже существуют")
+	}
+
+	log.Println("✅ Проверка базы данных завершена")
 	return nil
 }
 
-func CloseDB() {
-	sqlDB, err := DB.DB()
-	if err != nil {
-		log.Println("Error getting database instance:", err)
-		return
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
 	}
-	sqlDB.Close()
-}
-
-func createDemoData() {
-	// Проверяем, есть ли пользователи
-	var userCount int64
-	DB.Model(&models.User{}).Count(&userCount)
-
-	if userCount == 0 {
-		// Создаём тестового пользователя
-		demoUser := models.User{
-			Username: "kayah",
-			Password: "81", // В реальном приложении должен быть хеш!
-			Email:    "kayahan81@yandex.ru",
-		}
-		DB.Create(&demoUser)
-
-		// Создаём демо-задачи
-		tomorrow := time.Now().Add(24 * time.Hour)
-		demoTasks := []models.Task{
-			{
-				UserID:      demoUser.ID,
-				Title:       "Выполнить задание №23",
-				Description: "Решить задачи по математическому анализу",
-				Folder:      "Математика",
-				Priority:    "high",
-				Deadline:    &tomorrow,
-			},
-			{
-				UserID:      demoUser.ID,
-				Title:       "Сделать презентацию проекта",
-				Description: "Подготовить слайды для отчёта",
-				Folder:      "Работа",
-				Priority:    "medium",
-				Completed:   true,
-			},
-		}
-
-		for _, task := range demoTasks {
-			DB.Create(&task)
-		}
-
-		// Создаём демо-записи Shadowrun
-		demoShadowrun := []models.ShadowrunEntry{
-			{
-				Title:       "Создание персонажа",
-				Category:    "персонажи",
-				Description: "Базовый процесс создания персонажа в Shadowrun 5e",
-				Content:     `<h4>Основные шаги создания персонажа:</h4><ol><li>Выбор концепции</li><li>Выбор расы</li><li>Распределение приоритетов</li></ol>`,
-				Tags:        `["персонажи", "правила", "начало"]`,
-			},
-			{
-				Title:       "Основные атрибуты",
-				Category:    "персонажи",
-				Description: "Базовые характеристики персонажа",
-				Content:     `<h4>Шесть основных атрибутов:</h4><table><tr><th>Атрибут</th><th>Описание</th></tr><tr><td>BOD</td><td>Телосложение</td></tr></table>`,
-				Tags:        `["персонажи", "атрибуты"]`,
-			},
-		}
-
-		for _, entry := range demoShadowrun {
-			DB.Create(&entry)
-		}
-
-		log.Println("✅ Demo data created: admin/admin123, tasks, shadowrun entries")
-	}
-}
-
-// Получение пользователя по ID
-func GetUserByID(id uint) (*models.User, error) {
-	var user models.User
-	if err := DB.First(&user, id).Error; err != nil {
-		return nil, err
-	}
-	return &user, nil
-}
-
-// Получение пользователя по имени
-func GetUserByUsername(username string) (*models.User, error) {
-	var user models.User
-	if err := DB.Where("username = ?", username).First(&user).Error; err != nil {
-		return nil, err
-	}
-	return &user, nil
+	return value
 }

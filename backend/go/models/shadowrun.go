@@ -1,22 +1,20 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type ShadowrunEntry struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	Title       string    `json:"title" gorm:"not null"`
-	Category    string    `json:"category" gorm:"not null;index"`
-	Description string    `json:"description" gorm:"type:text"`
-	Content     string    `json:"content" gorm:"type:text;not null"`
-	Tags        string    `json:"tags" gorm:"type:text"` // JSON массив строк
-	Views       int       `json:"views" gorm:"default:0"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type SearchRequest struct {
-	Query    string `form:"q"`
-	Category string `form:"category"`
-	Limit    int    `form:"limit" binding:"omitempty,min=1,max=100"`
-	Offset   int    `form:"offset" binding:"omitempty,min=0"`
+	ID          uint           `gorm:"primaryKey" json:"id"`
+	Title       string         `gorm:"size:255;not null" json:"title"`
+	Category    string         `gorm:"size:100;not null" json:"category"`
+	Description string         `gorm:"type:text" json:"description"`
+	Content     string         `gorm:"type:text" json:"content"`
+	Tags        string         `gorm:"type:text" json:"tags"` // Строка с тегами через запятую
+	Views       int            `gorm:"default:0" json:"views"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }

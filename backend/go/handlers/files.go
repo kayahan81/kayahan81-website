@@ -3,494 +3,403 @@ package handlers
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"portfolio/models"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-
-	"portfolio/database"
-	"portfolio/middleware"
-	"portfolio/models"
+	"gorm.io/gorm"
 )
 
-// Максимальный размер файла (5GB)
-const MaxUploadSize = 5 * 1024 * 1024 * 1024
-
-// Получение списка файлов пользователя
-func GetFiles(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Параметры запроса
-	folder := c.DefaultQuery("folder", "root")
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-
-	var files []models.File
-	query := database.DB.Where("user_id = ?", user.ID)
-
-	if folder != "all" {
-		query = query.Where("folder = ?", folder)
-	}
-
-	// Получаем файлы
-	if err := query.Order("uploaded_at DESC").
-		Limit(limit).
-		Offset(offset).
-		Find(&files).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get files"})
-		return
-	}
-
-	// Формируем ответ
-	var response []models.FileResponse
-	for _, file := range files {
-		response = append(response, models.FileResponse{
-			ID:         file.ID,
-			Filename:   file.Filename,
-			Size:       file.Size,
-			SizeHuman:  file.GetSizeHuman(),
-			MimeType:   file.MimeType,
-			Folder:     file.Folder,
-			UploadedAt: file.UploadedAt,
-			URL:        fmt.Sprintf("/api/files/download/%d", file.ID),
-		})
-	}
-
-	// Получаем общую статистику
-	var totalSize int64
-	database.DB.Model(&models.File{}).
-		Where("user_id = ?", user.ID).
-		Select("COALESCE(SUM(size), 0)").
-		Scan(&totalSize)
-
-	var fileCount int64
-	database.DB.Model(&models.File{}).
-		Where("user_id = ?", user.ID).
-		Count(&fileCount)
-
-	c.JSON(http.StatusOK, gin.H{
-		"files":     response,
-		"total":     fileCount,
-		"totalSize": totalSize,
-		"quota":     5 * 1024 * 1024 * 1024, // 5GB
-		"used":      totalSize,
-		"available": 5*1024*1024*1024 - totalSize,
-	})
-}
-
-// Загрузка файла
+// UploadFile загрузка файла
 func UploadFile(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
 
-	// Проверяем размер запроса
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxUploadSize)
-
-	// Получаем файл из запроса
-	file, err := c.FormFile("file")
+	// Получаем файл из формы
+	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		if err == http.ErrMissingFile {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
-		} else if strings.Contains(err.Error(), "request body too large") {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File too large (max 5GB)"})
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Файл не получен"})
+		return
+	}
+	defer file.Close()
+
+	// Проверяем размер файла (макс 50MB)
+	maxSize := int64(50 * 1024 * 1024) // 50MB
+	if header.Size > maxSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Файл слишком большой (макс. 50MB)"})
 		return
 	}
 
-	// Проверяем размер файла
-	if file.Size > MaxUploadSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File too large (max 5GB)"})
+	// Проверяем расширение файла
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	allowedExts := []string{".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx", ".txt", ".go", ".zip"}
+	allowed := false
+	for _, a := range allowedExts {
+		if ext == a {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Тип файла не разрешён"})
 		return
 	}
 
 	// Проверяем квоту пользователя
-	var totalSize int64
-	database.DB.Model(&models.File{}).
-		Where("user_id = ?", user.ID).
-		Select("COALESCE(SUM(size), 0)").
-		Scan(&totalSize)
-
-	if totalSize+file.Size > 5*1024*1024*1024 {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Storage quota exceeded"})
+	var user models.User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Пользователь не найден"})
 		return
 	}
 
-	// Получаем папку из запроса
-	folder := c.DefaultPostForm("folder", "root")
-
-	// Создаём уникальное имя файла
-	ext := filepath.Ext(file.Filename)
-	filename := strings.TrimSuffix(filepath.Base(file.Filename), ext)
-	uniqueID := uuid.New().String()[:8]
-	safeFilename := fmt.Sprintf("%s_%s%s",
-		strings.ReplaceAll(filename, " ", "_"),
-		uniqueID,
-		ext)
-
-	// Создаём папку для загрузок если её нет
-	uploadDir := os.Getenv("UPLOAD_DIR")
-	if uploadDir == "" {
-		uploadDir = "./uploads"
+	// Проверяем достаточно ли места (используем StorageQuota из модели)
+	if user.StorageUsed+header.Size > user.StorageQuota {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("Недостаточно места в хранилище. Использовано: %s/%s",
+				formatBytes(user.StorageUsed), formatBytes(user.StorageQuota)), // Исправлено здесь
+		})
+		return
 	}
 
-	userDir := filepath.Join(uploadDir, fmt.Sprintf("user_%d", user.ID))
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
+	// Создаём уникальное имя файла
+	fileID := uuid.New().String()
+	newFilename := fileID + ext
+	uploadPath := filepath.Join("uploads", strconv.Itoa(int(userID)))
+
+	// Создаём директорию если её нет
+	if err := os.MkdirAll(uploadPath, 0755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка создания директории"})
 		return
 	}
 
 	// Сохраняем файл
-	filePath := filepath.Join(userDir, safeFilename)
-	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+	filePath := filepath.Join(uploadPath, newFilename)
+	dst, err := os.Create(filePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сохранения файла"})
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка копирования файла"})
 		return
 	}
 
-	// Определяем MIME-тип
-	mimeType := file.Header.Get("Content-Type")
-	if mimeType == "" {
-		// Пытаемся определить по расширению
-		switch strings.ToLower(ext) {
-		case ".jpg", ".jpeg":
-			mimeType = "image/jpeg"
-		case ".png":
-			mimeType = "image/png"
-		case ".gif":
-			mimeType = "image/gif"
-		case ".pdf":
-			mimeType = "application/pdf"
-		case ".doc", ".docx":
-			mimeType = "application/msword"
-		case ".zip":
-			mimeType = "application/zip"
-		default:
-			mimeType = "application/octet-stream"
+	// Получаем папку из формы
+	folder := c.PostForm("folder")
+	if folder == "" {
+		folder = "general"
+	}
+
+	// Создаём запись в базе данных
+	fileRecord := models.File{
+		UserID:           userID,
+		Filename:         newFilename,
+		OriginalFilename: header.Filename,
+		FilePath:         filePath,
+		FileSize:         header.Size,
+		MimeType:         header.Header.Get("Content-Type"),
+		Folder:           folder,
+		UploadedAt:       time.Now(),
+	}
+
+	if err := db.Create(&fileRecord).Error; err != nil {
+		os.Remove(filePath) // Удаляем файл если не удалось сохранить запись
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сохранения в базу данных"})
+		return
+	}
+
+	// Обновляем использованное место
+	user.StorageUsed += header.Size
+	db.Save(&user)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Файл успешно загружен",
+		"file": gin.H{
+			"id":          fileRecord.ID,
+			"filename":    fileRecord.OriginalFilename,
+			"size":        fileRecord.FileSize,
+			"size_human":  fileRecord.GetSizeHuman(),
+			"folder":      fileRecord.Folder,
+			"uploaded_at": fileRecord.UploadedAt.Format("2006-01-02 15:04:05"),
+		},
+		"storage_used":  user.StorageUsed,
+		"storage_quota": user.StorageQuota, // Используем из модели
+	})
+}
+
+// GetFiles получение файлов пользователя
+func GetFiles(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+	folder := c.Query("folder")
+
+	var files []models.File
+	query := db.Where("user_id = ?", userID)
+
+	if folder != "" && folder != "all" {
+		query = query.Where("folder = ?", folder)
+	}
+
+	if err := query.Find(&files).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка получения файлов"})
+		return
+	}
+
+	// Получаем информацию о хранилище
+	var user models.User
+	db.First(&user, userID)
+
+	response := make([]gin.H, len(files))
+	for i, file := range files {
+		response[i] = gin.H{
+			"id":          file.ID,
+			"filename":    file.OriginalFilename,
+			"size":        file.FileSize,
+			"size_human":  file.GetSizeHuman(),
+			"mime_type":   file.MimeType,
+			"folder":      file.Folder,
+			"uploaded_at": file.UploadedAt.Format("2006-01-02 15:04:05"),
 		}
 	}
 
-	// Сохраняем информацию о файле в БД
-	dbFile := models.File{
-		UserID:     user.ID,
-		Filename:   file.Filename,
-		Filepath:   filePath,
-		Size:       file.Size,
-		MimeType:   mimeType,
-		Folder:     folder,
-		UploadedAt: time.Now(),
-	}
+	c.JSON(http.StatusOK, gin.H{
+		"files":         response,
+		"storage_used":  user.StorageUsed,
+		"storage_quota": user.StorageQuota, // Используем из модели
+	})
+}
 
-	if err := database.DB.Create(&dbFile).Error; err != nil {
-		// Удаляем файл если не удалось сохранить в БД
-		os.Remove(filePath)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file info"})
+// GetFile - получение информации о файле
+func GetFile(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	id := c.Param("id")
+	var file models.File
+
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&file).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Файл не найден"})
 		return
 	}
 
-	// Обновляем использованное место у пользователя
-	database.DB.Model(&user).Update("storage_used", totalSize+file.Size)
-
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "File uploaded successfully",
-		"file": models.FileResponse{
-			ID:         dbFile.ID,
-			Filename:   dbFile.Filename,
-			Size:       dbFile.Size,
-			SizeHuman:  dbFile.GetSizeHuman(),
-			MimeType:   dbFile.MimeType,
-			Folder:     dbFile.Folder,
-			UploadedAt: dbFile.UploadedAt,
-			URL:        fmt.Sprintf("/api/files/download/%d", dbFile.ID),
+	c.JSON(http.StatusOK, gin.H{
+		"file": gin.H{
+			"id":          file.ID,
+			"filename":    file.OriginalFilename,
+			"size":        file.FileSize,
+			"size_human":  file.GetSizeHuman(),
+			"mime_type":   file.MimeType,
+			"folder":      file.Folder,
+			"uploaded_at": file.UploadedAt.Format("2006-01-02 15:04:05"),
 		},
 	})
 }
 
-// Загрузка нескольких файлов (Drag & Drop)
-func UploadMultipleFiles(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Проверяем размер запроса
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, MaxUploadSize*10)
-
-	form, err := c.MultipartForm()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	files := form.File["files"]
-	folder := c.DefaultPostForm("folder", "root")
-
-	// Проверяем общий размер файлов
-	var totalSize int64
-	for _, file := range files {
-		totalSize += file.Size
-	}
-
-	// Проверяем квоту
-	var currentSize int64
-	database.DB.Model(&models.File{}).
-		Where("user_id = ?", user.ID).
-		Select("COALESCE(SUM(size), 0)").
-		Scan(&currentSize)
-
-	if currentSize+totalSize > 5*1024*1024*1024 {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Storage quota exceeded"})
-		return
-	}
-
-	// Создаём папку для загрузок
-	uploadDir := os.Getenv("UPLOAD_DIR")
-	if uploadDir == "" {
-		uploadDir = "./uploads"
-	}
-
-	userDir := filepath.Join(uploadDir, fmt.Sprintf("user_%d", user.ID))
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
-		return
-	}
-
-	var uploadedFiles []models.FileResponse
-	var failedFiles []string
-
-	// Обрабатываем каждый файл
-	for _, file := range files {
-		// Создаём уникальное имя
-		ext := filepath.Ext(file.Filename)
-		filename := strings.TrimSuffix(filepath.Base(file.Filename), ext)
-		uniqueID := uuid.New().String()[:8]
-		safeFilename := fmt.Sprintf("%s_%s%s",
-			strings.ReplaceAll(filename, " ", "_"),
-			uniqueID,
-			ext)
-
-		// Сохраняем файл
-		filePath := filepath.Join(userDir, safeFilename)
-		if err := c.SaveUploadedFile(file, filePath); err != nil {
-			failedFiles = append(failedFiles, file.Filename)
-			continue
-		}
-
-		// Определяем MIME-тип
-		mimeType := file.Header.Get("Content-Type")
-		if mimeType == "" {
-			mimeType = "application/octet-stream"
-		}
-
-		// Сохраняем в БД
-		dbFile := models.File{
-			UserID:     user.ID,
-			Filename:   file.Filename,
-			Filepath:   filePath,
-			Size:       file.Size,
-			MimeType:   mimeType,
-			Folder:     folder,
-			UploadedAt: time.Now(),
-		}
-
-		if err := database.DB.Create(&dbFile).Error; err != nil {
-			os.Remove(filePath)
-			failedFiles = append(failedFiles, file.Filename)
-			continue
-		}
-
-		uploadedFiles = append(uploadedFiles, models.FileResponse{
-			ID:         dbFile.ID,
-			Filename:   dbFile.Filename,
-			Size:       dbFile.Size,
-			SizeHuman:  dbFile.GetSizeHuman(),
-			MimeType:   dbFile.MimeType,
-			Folder:     dbFile.Folder,
-			UploadedAt: dbFile.UploadedAt,
-			URL:        fmt.Sprintf("/api/files/download/%d", dbFile.ID),
-		})
-	}
-
-	// Обновляем использованное место
-	database.DB.Model(&user).Update("storage_used", currentSize+totalSize)
-
-	response := gin.H{
-		"message":       fmt.Sprintf("Uploaded %d files", len(uploadedFiles)),
-		"uploaded":      uploadedFiles,
-		"uploadedCount": len(uploadedFiles),
-		"failedCount":   len(failedFiles),
-	}
-
-	if len(failedFiles) > 0 {
-		response["failed"] = failedFiles
-		response["message"] = fmt.Sprintf("Uploaded %d files, failed: %d", len(uploadedFiles), len(failedFiles))
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
-// Скачивание файла
+// DownloadFile скачивание файла
 func DownloadFile(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+	fileID := c.Param("id")
 
-	// Получаем ID файла
-	fileID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file ID"})
-		return
-	}
-
-	// Получаем файл из БД
 	var file models.File
-	if err := database.DB.Where("id = ? AND user_id = ?", fileID, user.ID).First(&file).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+	if err := db.Where("id = ? AND user_id = ?", fileID, userID).First(&file).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Файл не найден"})
 		return
 	}
 
-	// Проверяем существование файла на диске
-	if _, err := os.Stat(file.Filepath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found on server"})
+	// Проверяем существует ли файл
+	if _, err := os.Stat(file.FilePath); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Файл на диске не найден"})
 		return
 	}
 
 	// Отправляем файл
-	c.Header("Content-Description", "File Transfer")
-	c.Header("Content-Transfer-Encoding", "binary")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", file.Filename))
-	c.Header("Content-Type", "application/octet-stream")
-	c.Header("Content-Length", fmt.Sprintf("%d", file.Size))
-	c.File(file.Filepath)
+	c.FileAttachment(file.FilePath, file.OriginalFilename)
 }
 
-// Удаление файла
+// DeleteFile удаление файла
 func DeleteFile(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+	fileID := c.Param("id")
 
-	fileID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file ID"})
-		return
-	}
-
-	// Получаем файл
 	var file models.File
-	if err := database.DB.Where("id = ? AND user_id = ?", fileID, user.ID).First(&file).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+	if err := db.Where("id = ? AND user_id = ?", fileID, userID).First(&file).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Файл не найден"})
 		return
 	}
 
 	// Удаляем файл с диска
-	if err := os.Remove(file.Filepath); err != nil && !os.IsNotExist(err) {
-		log.Printf("Warning: failed to delete file from disk: %v", err)
-	}
-
-	// Удаляем запись из БД
-	if err := database.DB.Delete(&file).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete file"})
+	if err := os.Remove(file.FilePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка удаления файла"})
 		return
 	}
 
-	// Обновляем использованное место
-	database.DB.Model(&user).
-		Where("id = ?", user.ID).
-		Update("storage_used", user.StorageUsed-file.Size)
+	// Обновляем квоту пользователя
+	var user models.User
+	db.First(&user, userID)
+	user.StorageUsed -= file.FileSize
+	if user.StorageUsed < 0 {
+		user.StorageUsed = 0
+	}
+	db.Save(&user)
+
+	// Удаляем запись из базы данных
+	db.Delete(&file)
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "File deleted successfully",
-		"freed":   file.Size,
+		"message":       "Файл успешно удалён",
+		"storage_used":  user.StorageUsed,
+		"storage_quota": user.StorageQuota, // Используем из модели
 	})
 }
 
-// Создание папки
-func CreateFolder(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+// RenameFile переименование файла
+func RenameFile(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+	fileID := c.Param("id")
+
+	var request struct {
+		Filename string `json:"filename" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос: " + err.Error()})
 		return
 	}
 
-	type FolderRequest struct {
+	// Проверяем имя файла
+	if request.Filename == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Имя файла не может быть пустым"})
+		return
+	}
+
+	var file models.File
+	if err := db.Where("id = ? AND user_id = ?", fileID, userID).First(&file).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Файл не найден"})
+		return
+	}
+
+	// Обновляем имя файла
+	file.OriginalFilename = request.Filename
+	if err := db.Save(&file).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при переименовании файла"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Файл успешно переименован",
+		"file": gin.H{
+			"id":       file.ID,
+			"filename": file.OriginalFilename,
+		},
+	})
+}
+
+// CreateFileFolder создание папки для файлов
+func CreateFileFolder(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	var request struct {
 		Name string `json:"name" binding:"required"`
 	}
 
-	var req FolderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос: " + err.Error()})
 		return
 	}
 
-	// Просто сохраняем информацию о папке
-	// В реальном приложении можно создать таблицу folders
+	// Проверяем имя папки
+	if request.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Имя папки не может быть пустым"})
+		return
+	}
+
+	// Проверяем, нет ли уже такой папки
+	var existingFiles []models.File
+	db.Where("user_id = ? AND folder = ?", userID, request.Name).Find(&existingFiles)
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Folder '%s' created", req.Name),
-		"folder":  req.Name,
+		"message": "Папка создана",
+		"folder": gin.H{
+			"name":       request.Name,
+			"file_count": len(existingFiles),
+			"exists":     len(existingFiles) > 0,
+		},
 	})
 }
 
-// Получение статистики хранилища
-func GetStorageStats(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+// GetFileFolders - получение списка папок пользователя
+func GetFileFolders(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	var folders []string
+	if err := db.Model(&models.File{}).
+		Where("user_id = ?", userID).
+		Distinct("folder").
+		Pluck("folder", &folders).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка получения папок"})
 		return
 	}
 
-	// Получаем статистику по папкам
-	var folderStats []struct {
-		Folder string
-		Count  int64
-		Size   int64
-	}
-
-	database.DB.Model(&models.File{}).
-		Select("folder, COUNT(*) as count, SUM(size) as size").
-		Where("user_id = ?", user.ID).
-		Group("folder").
-		Scan(&folderStats)
-
-	// Общая статистика
-	var totalSize int64
-	var fileCount int64
-
-	database.DB.Model(&models.File{}).
-		Where("user_id = ?", user.ID).
-		Select("COALESCE(SUM(size), 0)").
-		Scan(&totalSize)
-
-	database.DB.Model(&models.File{}).
-		Where("user_id = ?", user.ID).
-		Count(&fileCount)
+	// Добавляем папку "all" для фильтрации
+	allFolders := append([]string{"all"}, folders...)
 
 	c.JSON(http.StatusOK, gin.H{
-		"totalSize":      totalSize,
-		"totalSizeHuman": formatBytes(totalSize),
-		"fileCount":      fileCount,
-		"quota":          5 * 1024 * 1024 * 1024,
-		"quotaHuman":     "5 GB",
-		"usedPercent":    float64(totalSize) / float64(5*1024*1024*1024) * 100,
-		"folders":        folderStats,
+		"folders": allFolders,
+		"count":   len(allFolders),
+	})
+}
+
+// MoveFile перемещение файла в другую папку
+func MoveFile(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+	fileID := c.Param("id")
+
+	var request struct {
+		Folder string `json:"folder" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный запрос: " + err.Error()})
+		return
+	}
+
+	var file models.File
+	if err := db.Where("id = ? AND user_id = ?", fileID, userID).First(&file).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Файл не найден"})
+		return
+	}
+
+	// Сохраняем старую папку для сообщения
+	oldFolder := file.Folder
+
+	// Обновляем папку файла
+	file.Folder = request.Folder
+	if err := db.Save(&file).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при перемещении файла"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Файл перемещён из '%s' в '%s'", oldFolder, request.Folder),
+		"file": gin.H{
+			"id":       file.ID,
+			"filename": file.OriginalFilename,
+			"folder":   file.Folder,
+		},
 	})
 }
 
@@ -506,49 +415,4 @@ func formatBytes(bytes int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
-}
-
-// Получение превью файла (для изображений и PDF)
-func GetFilePreview(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
-
-	fileID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file ID"})
-		return
-	}
-
-	var file models.File
-	if err := database.DB.Where("id = ? AND user_id = ?", fileID, user.ID).First(&file).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
-		return
-	}
-
-	// Проверяем тип файла
-	if !strings.HasPrefix(file.MimeType, "image/") && file.MimeType != "application/pdf" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Preview not available for this file type"})
-		return
-	}
-
-	// Читаем первые 500KB для превью
-	f, err := os.Open(file.Filepath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
-		return
-	}
-	defer f.Close()
-
-	// Для изображений отправляем как есть
-	if strings.HasPrefix(file.MimeType, "image/") {
-		c.Header("Content-Type", file.MimeType)
-		io.Copy(c.Writer, f)
-		return
-	}
-
-	// Для PDF нужно конвертировать в изображение (в реальном приложении)
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "PDF preview not implemented"})
 }

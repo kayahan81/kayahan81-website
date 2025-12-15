@@ -269,17 +269,46 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div id="upload-placeholder">
-                    <p>Выберите файлы для загрузки</p>
-                    <input type="file" id="file-upload-input" multiple>
-                    <div class="upload-progress" id="upload-progress">
+                <div id="upload-area">
+                    <div id="upload-placeholder">
+                        <i class="fas fa-cloud-upload-alt fa-3x" style="color: #4CAF50; margin-bottom: 15px;"></i>
+                        <p>Перетащите файлы сюда или</p>
+                        <button class="upload-select-btn" id="select-files-btn">
+                            <i class="fas fa-folder-open"></i> Выбрать файлы
+                        </button>
+                        <input type="file" id="file-upload-input" multiple style="display: none;">
+                        
+                        <!-- Добавлен выбор папки -->
+                        <div id="folder-select-container" style="margin-top: 20px; text-align: left;">
+                            <label style="display: block; margin-bottom: 5px; color: #666; font-size: 14px;">
+                                <i class="fas fa-folder"></i> Папка для загрузки:
+                            </label>
+                            <select id="upload-folder-select" class="form-control" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="general">Общая папка</option>
+                            </select>
+                        </div>
+                        
+                        <div class="upload-info">
+                            <p><small>Максимум: 50 МБ на файл</small></p>
+                            <p><small>Разрешены: PDF, JPG, PNG, DOC, TXT, GO, ZIP</small></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Контейнер для прогресса загрузки -->
+                    <div id="upload-progress" style="display: none; margin-top: 20px;">
                         <!-- Прогресс загрузки будет здесь -->
                     </div>
+                    
+                    <!-- Выбранные файлы -->
+                    <div id="selected-files" style="margin-top: 20px;"></div>
                 </div>
+            </div>
+            <div class="modal-footer" style="padding: 15px 20px; border-top: 1px solid #eee; text-align: right;">
+                <button class="btn-cancel" id="cancel-upload-btn" style="margin-right: 10px;">Отмена</button>
+                <button class="btn-primary" id="start-upload-btn" disabled>Начать загрузку</button>
             </div>
         </div>
     </div>
-    
     <!-- Подвал -->
     <footer class="footer">
         <div class="footer-content-left">
@@ -290,6 +319,8 @@
         </div>
     </footer>
     
+    
+    <script src="../../javascript/utils.js"></script>
     <script src="../../javascript/app.js"></script>
     <script src="../../javascript/storage.js"></script>
 </body>

@@ -1,104 +1,127 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
-	"portfolio/database"
-	"portfolio/middleware"
 	"portfolio/models"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-// Выполнение Go-скрипта
+// RunScript - выполнение Go кода
 func RunScript(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	var input struct {
+		Code     string `json:"code" binding:"required"`
+		Language string `json:"language" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	var req models.RunScriptRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Сохраняем скрипт в историю
+	script := models.Script{
+		UserID:   userID,
+		Name:     "Untitled",
+		Code:     input.Code,
+		Language: input.Language,
+	}
+
+	if err := db.Create(&script).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save script"})
 		return
 	}
 
-	// Эмуляция выполнения Go-кода
-	output := emulateGoExecution(req.Code)
+	// В реальной системе здесь был бы Docker или изолированная среда
+	// Для демо используем эмуляцию выполнения
+	output, err := emulateGoExecution(input.Code)
+
+	// Обновляем скрипт с результатом
 	now := time.Now()
-
-	// Сохраняем результат выполнения
-	script := models.Script{
-		UserID:     user.ID,
-		Name:       "Execution_" + now.Format("20060102_150405"),
-		Code:       req.Code,
-		Language:   req.Language,
-		Output:     output,
-		ExecutedAt: &now,
+	script.Output = output
+	if err != nil {
+		script.Output = "Error: " + err.Error()
 	}
+	script.ExecutedAt = &now // Исправлено: присваиваем указатель
+	db.Save(&script)
 
-	if err := database.DB.Create(&script).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save execution result"})
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success":   false,
+			"error":     err.Error(),
+			"output":    output,
+			"script_id": script.ID,
+		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"output": output,
-		"script": gin.H{
-			"id":          script.ID,
-			"name":        script.Name,
-			"executed_at": script.ExecutedAt,
-		},
+		"success":     true,
+		"output":      output,
+		"script_id":   script.ID,
+		"executed_at": script.ExecutedAt.Format(time.RFC3339),
 	})
 }
 
-// Получение списка скриптов пользователя
-func GetScripts(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
+// Эмуляция выполнения Go кода (для демо)
+func emulateGoExecution(code string) (string, error) {
+	// Внимание: В продакшене НЕ используйте этот подход!
+	// Это только для демонстрации. В реальном проекте используйте Docker или изолированные среды.
+
+	// Проверяем наличие package main
+	if len(code) < 20 || !contains(code, "package main") {
+		return "Error: code must contain 'package main'", fmt.Errorf("invalid go code")
 	}
 
-	var scripts []models.Script
-	if err := database.DB.Where("user_id = ?", user.ID).
-		Order("created_at DESC").
-		Find(&scripts).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get scripts"})
-		return
+	// Проверяем наличие func main()
+	if !contains(code, "func main()") {
+		return "Error: code must contain 'func main()'", fmt.Errorf("invalid go code")
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"scripts": scripts,
-	})
+	// Генерируем демо-вывод на основе содержимого кода
+	if contains(code, "fmt.Println(\"Hello") || contains(code, "fmt.Println(`Hello") {
+		return "Hello, Shadowrun World!\nДобро пожаловать в киберпанк 2077\n\nПрограмма выполнена успешно.", nil
+	}
+
+	if contains(code, "fibonacci") {
+		return "Числа Фибоначчи:\nF(0) = 0\nF(1) = 1\nF(2) = 1\nF(3) = 2\nF(4) = 3\nF(5) = 5\n\nПрограмма выполнена успешно.", nil
+	}
+
+	return "Код выполнен успешно.\nОшибка вывода.", nil
 }
 
-// Сохранение скрипта
+// SaveScript - сохранение скрипта
 func SaveScript(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	var input struct {
+		Name     string `json:"name" binding:"required"`
+		Code     string `json:"code" binding:"required"`
+		Language string `json:"language" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	var req models.SaveScriptRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Сохраняем скрипт
 	script := models.Script{
-		UserID:   user.ID,
-		Name:     req.Name,
-		Code:     req.Code,
-		Language: "go",
+		UserID:   userID,
+		Name:     input.Name,
+		Code:     input.Code,
+		Language: input.Language,
 	}
 
-	if err := database.DB.Create(&script).Error; err != nil {
+	if err := db.Create(&script).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save script"})
 		return
 	}
@@ -109,104 +132,74 @@ func SaveScript(c *gin.Context) {
 	})
 }
 
-// Удаление скрипта
-func DeleteScript(c *gin.Context) {
-	user, exists := middleware.GetUserFromContext(c)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-		return
-	}
+// GetScripts - получение списка скриптов пользователя
+func GetScripts(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
 
-	scriptID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid script ID"})
-		return
-	}
-
-	var script models.Script
-	if err := database.DB.Where("id = ? AND user_id = ?", scriptID, user.ID).
-		First(&script).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Script not found"})
-		return
-	}
-
-	if err := database.DB.Delete(&script).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete script"})
+	var scripts []models.Script
+	if err := db.Where("user_id = ?", userID).Order("created_at DESC").Find(&scripts).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch scripts"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Script deleted successfully",
+		"scripts": scripts,
+		"count":   len(scripts),
 	})
 }
 
-// Эмуляция выполнения Go-кода
-func emulateGoExecution(code string) string {
-	// Простая эмуляция
-	if len(code) < 10 {
-		return "Error: Code is too short"
+// GetScript - получение скрипта по ID
+func GetScript(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
 	}
 
-	// Базовые проверки
-	if !contains(code, "package main") {
-		return "Compile error: missing 'package main'\nEvery Go program must start with package main"
-	}
-
-	if !contains(code, "func main()") {
-		return "Compile error: missing 'func main()'\nNeed main function as entry point"
-	}
-
-	// Генерация "вывода" в зависимости от содержимого
-	if contains(code, "fmt.Println(\"Hello") || contains(code, "fmt.Println(`Hello") {
-		return `Hello, Shadowrun World!
-Добро пожаловать в киберпанк 2077
-
-Программа выполнена успешно.
-Время выполнения: 125 мс
-Память: 1.2 MB`
-	}
-
-	if contains(code, "fibonacci") || contains(code, "Fibonacci") {
-		return `Числа Фибоначчи:
-F(0) = 0
-F(1) = 1
-F(2) = 1
-F(3) = 2
-F(4) = 3
-F(5) = 5
-F(6) = 8
-F(7) = 13
-F(8) = 21
-F(9) = 34
-
-Программа выполнена успешно.
-Время выполнения: 95 мс
-Память: 1.5 MB`
-	}
-
-	// Общий ответ
-	return `Код выполняется...
-
-Вывод программы:
-[Эмуляция выполнения Go-кода]
-
-В реальной системе этот код был бы скомпилирован и выполнен.
-В учебных целях используется эмуляция.
-
-Программа выполнена успешно.
-Время выполнения: 150 мс
-Память: 1.8 MB`
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
+	var script models.Script
+	if err := db.Where("id = ? AND user_id = ?", id, userID).First(&script).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Script not found"})
+			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
 	}
-	return false
+
+	c.JSON(http.StatusOK, gin.H{"script": script})
+}
+
+// DeleteScript - удаление скрипта
+func DeleteScript(c *gin.Context) {
+	db := c.MustGet("db").(*gorm.DB)
+	userID := c.GetUint("user_id")
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	result := db.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Script{})
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete script"})
+		return
+	}
+
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Script not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Script deleted successfully"})
+}
+
+// Вспомогательная функция
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
+		(s[:len(substr)] == substr || contains(s[1:], substr)))
 }

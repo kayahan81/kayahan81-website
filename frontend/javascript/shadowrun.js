@@ -1,271 +1,43 @@
 /**
  * Файл JavaScript для страницы Shadowrun 5e
+ * Интеграция с бэкендом с фолбэком на локальные данные
  */
 
-// Демо-данные по Shadowrun 5e
+// Демо-данные по Shadowrun 5e (фолбэк) на английском
 let shadowrunData = [
     {
         id: 1,
-        title: 'Создание персонажа',
-        category: 'персонажи',
-        description: 'Базовый процесс создания персонажа в Shadowrun 5e',
-        content: `<h4>Основные шаги создания персонажа:</h4>
+        title: 'Character Creation',
+        category: 'Characters',
+        description: 'Basic character creation process in Shadowrun 5e',
+        content: `<h4>Basic steps of character creation:</h4>
         <ol>
-            <li><strong>Выбор концепции:</strong> Определите роль персонажа в команде (Street Samurai, Mage, Decker, Face и т.д.)</li>
-            <li><strong>Выбор расы:</strong> Человек, Эльф, Дворф, Орк или Тролль</li>
-            <li><strong>Распределение приоритетов:</strong> Используйте систему Priority Table для распределения ресурсов</li>
-            <li><strong>Приобретение навыков:</strong> Распределите очки навыков и навыков-знаний</li>
-            <li><strong>Приобретение качеств:</strong> Выберите положительные и отрицательные качества</li>
-            <li><strong>Приобретение снаряжения:</strong> Купите оружие, броню, кибернетику и прочее снаряжение</li>
-            <li><strong>Расчёт финальных значений:</strong> Рассчитайте инициативу, хит-пойнты и прочие параметры</li>
+            <li><strong>Concept Selection:</strong> Define character role in team</li>
+            <li><strong>Race Selection:</strong> Human, Elf, Dwarf, Ork or Troll</li>
+            <li><strong>Priority Distribution:</strong> Use Priority Table system</li>
+            <li><strong>Skill Acquisition:</strong> Distribute skill points</li>
+            <li><strong>Quality Acquisition:</strong> Choose positive and negative qualities</li>
+            <li><strong>Gear Acquisition:</strong> Buy weapons, armor, cyberware</li>
+            <li><strong>Final Calculation:</strong> Calculate initiative, hit points</li>
         </ol>`,
-        tags: ['персонажи', 'правила', 'начало']
+        tags: 'characters,rules,beginning'
     },
     {
         id: 2,
-        title: 'Основные атрибуты',
-        category: 'персонажи',
-        description: 'Базовые характеристики персонажа',
-        content: `<h4>Шесть основных атрибутов:</h4>
+        title: 'Basic Attributes',
+        category: 'Characters',
+        description: 'Basic character characteristics',
+        content: `<h4>Six main attributes:</h4>
         <table>
-            <tr>
-                <th>Атрибут</th>
-                <th>Описание</th>
-                <th>Типовое значение</th>
-            </tr>
-            <tr>
-                <td><strong>BOD (Телосложение)</strong></td>
-                <td>Физическая выносливость и сопротивление повреждениям</td>
-                <td>3-6</td>
-            </tr>
-            <tr>
-                <td><strong>AGI (Ловкость)</strong></td>
-                <td>Физическая координация и проворство</td>
-                <td>3-6</td>
-            </tr>
-            <tr>
-                <td><strong>REA (Реакция)</strong></td>
-                <td>Физическая скорость и рефлексы</td>
-                <td>3-6</td>
-            </tr>
-            <tr>
-                <td><strong>STR (Сила)</strong></td>
-                <td>Физическая мощь и грубая сила</td>
-                <td>3-6</td>
-            </tr>
-            <tr>
-                <td><strong>WIL (Воля)</strong></td>
-                <td>Ментальная устойчивость и сила духа</td>
-                <td>3-6</td>
-            </tr>
-            <tr>
-                <td><strong>LOG (Логика)</strong></td>
-                <td>Аналитическое мышление и решение проблем</td>
-                <td>3-6</td>
-            </tr>
-            <tr>
-                <td><strong>INT (Интеллект)</strong></td>
-                <td>Острота ума и восприятие информации</td>
-                <td>3-6</td>
-            </tr>
-            <tr>
-                <td><strong>CHA (Харизма)</strong></td>
-                <td>Социальное взаимодействие и влияние</td>
-                <td>3-6</td>
-            </tr>
-        </table>
-        <p><strong>Особые атрибуты:</strong> Магия (MAG), Резистентность (RES), Инициатива (INI)</p>`,
-        tags: ['персонажи', 'атрибуты', 'правила']
-    },
-    {
-        id: 3,
-        title: 'Расы персонажей',
-        category: 'персонажи',
-        description: 'Доступные расы в Shadowrun 5e',
-        content: `<h4>Пять основных рас:</h4>
-        <table>
-            <tr>
-                <th>Раса</th>
-                <th>Описание</th>
-                <th>Бонусы</th>
-                <th>Минусы</th>
-            </tr>
-            <tr>
-                <td><strong>Человек</strong></td>
-                <td>Средняя раса без особых бонусов или штрафов</td>
-                <td>+1 к Edge (Удаче)</td>
-                <td>Нет особых минусов</td>
-            </tr>
-            <tr>
-                <td><strong>Эльф</strong></td>
-                <td>Грациозные и харизматичные существа</td>
-                <td>+2 AGI, +2 CHA</td>
-                <td>-2 STR</td>
-            </tr>
-            <tr>
-                <td><strong>Дворф</strong></td>
-                <td>Крепкие и волевые низкорослые существа</td>
-                <td>+2 BOD, +2 WIL, +1 REA</td>
-                <td>-1 AGI, +1 к стоимости жилья</td>
-            </tr>
-            <tr>
-                <td><strong>Орк</strong></td>
-                <td>Сильные и выносливые существа</td>
-                <td>+3 BOD, +2 STR</td>
-                <td>-1 LOG, -1 CHA, социальные предрассудки</td>
-            </tr>
-            <tr>
-                <td><strong>Тролль</strong></td>
-                <td>Мощные и крупные существа</td>
-                <td>+4 BOD, +4 STR</td>
-                <td>-1 AGI, -1 CHA, большие расходы</td>
-            </tr>
+            <tr><th>Attribute</th><th>Description</th><th>Typical Value</th></tr>
+            <tr><td><strong>BOD (Body)</strong></td><td>Physical endurance</td><td>3-6</td></tr>
+            <tr><td><strong>AGI (Agility)</strong></td><td>Physical coordination</td><td>3-6</td></tr>
+            <tr><td><strong>REA (Reaction)</strong></td><td>Physical speed</td><td>3-6</td></tr>
+            <tr><td><strong>STR (Strength)</strong></td><td>Physical power</td><td>3-6</td></tr>
+            <tr><td><strong>WIL (Willpower)</strong></td><td>Mental resilience</td><td>3-6</td></tr>
+            <tr><td><strong>LOG (Logic)</strong></td><td>Analytical thinking</td><td>3-6</td></tr>
         </table>`,
-        tags: ['персонажи', 'расы']
-    },
-    {
-        id: 4,
-        title: 'Магия и заклинания',
-        category: 'магия',
-        description: 'Основы магической системы',
-        content: `<h4>Типы магов:</h4>
-        <ul>
-            <li><strong>Hermetic Mages:</strong> Академические маги, использующие логику и формулы</li>
-            <li><strong>Shamans:</strong> Духовные маги, общающиеся с духами</li>
-            <li><strong>Adepts:</strong> Физические маги, усиливающие своё тело</li>
-            <li><strong>Aspected Mages:</strong> Специализированные маги с ограничениями</li>
-            <li><strong>Mystic Adepts:</strong> Гибрид мага и адепта</li>
-        </ul>
-        
-        <h4>Основные заклинания:</h4>
-        <table>
-            <tr>
-                <th>Тип</th>
-                <th>Пример</th>
-                <th>Описание</th>
-            </tr>
-            <tr>
-                <td><strong>Combat Spells</strong></td>
-                <td>Manabolt, Fireball</td>
-                <td>Заклинания для нанесения урона</td>
-            </tr>
-            <tr>
-                <td><strong>Detection Spells</strong></td>
-                <td>Clairvoyance, Detect Life</td>
-                <td>Заклинания для обнаружения</td>
-            </tr>
-            <tr>
-                <td><strong>Health Spells</strong></td>
-                <td>Heal, Cure Disease</td>
-                <td>Лечебные заклинания</td>
-            </tr>
-            <tr>
-                <td><strong>Illusion Spells</strong></td>
-                <td>Invisibility, Physical Mask</td>
-                <td>Заклинания иллюзий</td>
-            </tr>
-            <tr>
-                <td><strong>Manipulation Spells</strong></td>
-                <td>Control Thoughts, Levitate</td>
-                <td>Заклинания управления</td>
-            </tr>
-        </table>`,
-        tags: ['магия', 'заклинания']
-    },
-    {
-        id: 5,
-        title: 'Навыки персонажей',
-        category: 'навыки',
-        description: 'Система навыков в Shadowrun 5e',
-        content: `<h4>Категории навыков:</h4>
-        
-        <h5>Активные навыки (Active Skills):</h5>
-        <table>
-            <tr>
-                <th>Группа</th>
-                <th>Навыки</th>
-                <th>Связанный атрибут</th>
-            </tr>
-            <tr>
-                <td><strong>Firearms</strong></td>
-                <td>Pistols, Automatics, Longarms</td>
-                <td>AGI</td>
-            </tr>
-            <tr>
-                <td><strong>Close Combat</strong></td>
-                <td>Blades, Clubs, Unarmed Combat</td>
-                <td>AGI</td>
-            </tr>
-            <tr>
-                <td><strong>Stealth</strong></td>
-                <td>Sneaking, Disguise, Palming</td>
-                <td>AGI</td>
-            </tr>
-            <tr>
-                <td><strong>Social</strong></td>
-                <td>Con, Etiquette, Negotiation</td>
-                <td>CHA</td>
-            </tr>
-            <tr>
-                <td><strong>Technical</strong></td>
-                <td>Hardware, Software, Cybertechnology</td>
-                <td>LOG</td>
-            </tr>
-        </table>
-        
-        <h5>Знания и языки (Knowledge Skills):</h5>
-        <p>Специализированные знания персонажа, от истории до корпоративной политики.</p>`,
-        tags: ['навыки', 'персонажи']
-    },
-    {
-        id: 6,
-        title: 'Кибернетика',
-        category: 'технологии',
-        description: 'Импланты и кибернетические улучшения',
-        content: `<h4>Типы кибернетики:</h4>
-        
-        <table>
-            <tr>
-                <th>Тип</th>
-                <th>Примеры</th>
-                <th>Эссенс</th>
-                <th>Назначение</th>
-            </tr>
-            <tr>
-                <td><strong>Cybereyes</strong></td>
-                <td>Image Link, Low-Light Vision, Thermographic Vision</td>
-                <td>0.1-0.5</td>
-                <td>Улучшение зрения</td>
-            </tr>
-            <tr>
-                <td><strong>Cyberears</strong></td>
-                <td>Audio Enhancement, Balance Augmenter, Spatial Recognizer</td>
-                <td>0.1-0.3</td>
-                <td>Улучшение слуха</td>
-            </tr>
-            <tr>
-                <td><strong>Cyberlimbs</strong></td>
-                <td>Full Arm, Full Leg, Obvious/Subtle</td>
-                <td>0.8-1.2</td>
-                <td>Замена конечностей</td>
-            </tr>
-            <tr>
-                <td><strong>Bodyware</strong></td>
-                <td>Bone Lacing, Muscle Replacement, Skin Pocket</td>
-                <td>0.2-2.0</td>
-                <td>Улучшение тела</td>
-            </tr>
-            <tr>
-                <td><strong>Headware</strong></td>
-                <td>Datajack, Commlink, Control Rig</td>
-                <td>0.1-0.5</td>
-                <td>Улучшение головы/мозга</td>
-            </tr>
-        </table>
-        
-        <h4>Эссенс (Essence):</h4>
-        <p>Мера человечности персонажа. Каждая кибернетика уменьшает эссенс. При 0 эссенс персонаж становится полным киборгом.</p>`,
-        tags: ['технологии', 'кибернетика', 'импланты']
+        tags: 'characters,attributes'
     }
 ];
 
@@ -274,33 +46,211 @@ let currentResults = [];
 let selectedEntry = null;
 let currentTag = 'all';
 let recentEntries = [];
+let allCategories = [];
 
 // Основная функция
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Страница Shadowrun 5e загружена');
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('Shadowrun page loaded');
+    
+    // Проверяем авторизацию
+    const user = await checkAuth();
+    if (!user) {
+        console.log('User not authenticated');
+        return;
+    }
+    
+    console.log('User authenticated:', user.username);
     
     // Инициализация
     initSearch();
     initTagFilters();
     initAccessButtons();
-    updateEntriesCount();
     
-    // Загружаем несколько примеров в результаты
+    // Загружаем данные
+    await loadShadowrunData();
     showDemoResults();
 });
 
-// Инициализация поиска
+// ==================== API ФУНКЦИИ ====================
+
+/**
+ * Загрузка данных Shadowrun с сервера
+ */
+async function loadShadowrunData() {
+    try {
+        console.log('Loading Shadowrun data from API...');
+        const response = await apiRequest('/shadowrun/entries', 'GET');
+        
+        if (response.entries && response.entries.length > 0) {
+            shadowrunData = response.entries;
+            console.log('Shadowrun data loaded from server:', shadowrunData.length, 'entries');
+            
+            // Загружаем категории
+            await loadCategories();
+        } else {
+            console.log('Server returned empty list, using demo data');
+            await loadCategories();
+        }
+        
+        updateEntriesCount();
+    } catch (error) {
+        console.warn('API недоступен, используем демо-данные:', error.message);
+        await loadCategories();
+        updateEntriesCount();
+    }
+}
+
+/**
+ * Загрузка категорий
+ */
+async function loadCategories() {
+    try {
+        const categoriesResponse = await apiRequest('/shadowrun/categories', 'GET');
+        if (categoriesResponse.categories) {
+            allCategories = categoriesResponse.categories;
+            console.log('Categories loaded:', allCategories);
+            updateCategoryFilters(allCategories);
+        }
+    } catch (error) {
+        console.warn('Не удалось загрузить категории:', error.message);
+        // Используем категории из демо-данных
+        allCategories = [...new Set(shadowrunData.map(entry => entry.category))];
+        updateCategoryFilters(allCategories);
+    }
+}
+
+/**
+ * Обновление фильтров категорий
+ */
+function updateCategoryFilters(categories) {
+    const tagsContainer = document.querySelector('.tags-container');
+    if (!tagsContainer) return;
+    
+    console.log('Updating category filters with:', categories);
+    
+    // Сохраняем кнопку "All"
+    const allTagBtn = document.querySelector('[data-tag="all"]');
+    
+    // Очищаем контейнер
+    tagsContainer.innerHTML = '';
+    
+    // Добавляем кнопку "All" если она существует
+    if (allTagBtn) {
+        tagsContainer.appendChild(allTagBtn);
+    } else {
+        // Создаем кнопку "All"
+        const allBtn = document.createElement('button');
+        allBtn.className = 'tag-btn active';
+        allBtn.setAttribute('data-tag', 'all');
+        allBtn.textContent = 'All';
+        allBtn.addEventListener('click', function() {
+            document.querySelectorAll('.tag-btn').forEach(b => 
+                b.classList.remove('active')
+            );
+            this.classList.add('active');
+            currentTag = 'all';
+            performSearch();
+        });
+        tagsContainer.appendChild(allBtn);
+    }
+    
+    // Добавляем категории из API
+    if (categories && categories.length > 0) {
+        categories.forEach(category => {
+            const tagBtn = document.createElement('button');
+            tagBtn.className = 'tag-btn';
+            tagBtn.setAttribute('data-tag', category);
+            tagBtn.textContent = category;
+            
+            tagBtn.addEventListener('click', function() {
+                document.querySelectorAll('.tag-btn').forEach(b => 
+                    b.classList.remove('active')
+                );
+                this.classList.add('active');
+                currentTag = category;
+                performSearch();
+            });
+            
+            tagsContainer.appendChild(tagBtn);
+        });
+    }
+}
+
+/**
+ * Поиск через API с фолбэком
+ */
+async function searchShadowrun(query, category = null) {
+    try {
+        let url = '/shadowrun/entries';
+        const params = new URLSearchParams();
+        
+        if (query && query.trim() !== '') {
+            params.append('q', query);
+        }
+        
+        if (category && category !== 'all') {
+            params.append('category', category);
+        }
+        
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        console.log('Searching API with:', url);
+        const response = await apiRequest(url, 'GET');
+        
+        if (response.entries) {
+            console.log('API search returned:', response.entries.length, 'results');
+            return response.entries;
+        }
+    } catch (error) {
+        console.warn('API search unavailable:', error.message);
+    }
+    
+    // Fallback to local search
+    return searchInDemoData(query, category);
+}
+
+/**
+ * Локальный поиск по демо-данным
+ */
+function searchInDemoData(query, category = null) {
+    return shadowrunData.filter(entry => {
+        if (category && category !== 'all') {
+            // Convert both to lowercase for case-insensitive comparison
+            if (entry.category.toLowerCase() !== category.toLowerCase()) {
+                return false;
+            }
+        }
+        
+        if (!query || query.trim() === '') {
+            return true;
+        }
+        
+        const searchTerm = query.toLowerCase();
+        const entryTitle = entry.title ? entry.title.toLowerCase() : '';
+        const entryDesc = entry.description ? entry.description.toLowerCase() : '';
+        const entryTags = entry.tags ? entry.tags.toLowerCase() : '';
+        const entryCategory = entry.category ? entry.category.toLowerCase() : '';
+        
+        return entryTitle.includes(searchTerm) ||
+               entryDesc.includes(searchTerm) ||
+               entryTags.includes(searchTerm) ||
+               entryCategory.includes(searchTerm);
+    });
+}
+
+// ==================== ОСНОВНЫЕ ФУНКЦИИ ====================
+
 function initSearch() {
     const searchInput = document.getElementById('search-input');
     const searchBtn = document.getElementById('search-btn');
     const sortSelect = document.getElementById('sort-results');
     
-    // Поиск по кнопке
     if (searchBtn) {
         searchBtn.addEventListener('click', performSearch);
     }
     
-    // Поиск по Enter
     if (searchInput) {
         searchInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -309,7 +259,6 @@ function initSearch() {
         });
     }
     
-    // Сортировка
     if (sortSelect) {
         sortSelect.addEventListener('change', function() {
             sortResults(this.value);
@@ -317,28 +266,20 @@ function initSearch() {
     }
 }
 
-// Инициализация фильтров по тегам
 function initTagFilters() {
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            // Снимаем активность со всех кнопок
             document.querySelectorAll('.tag-btn').forEach(b => 
                 b.classList.remove('active')
             );
             
-            // Активируем текущую
             this.classList.add('active');
-            
-            // Получаем тег
             currentTag = this.getAttribute('data-tag');
-            
-            // Выполняем поиск
             performSearch();
         });
     });
 }
 
-// Инициализация кнопок быстрого доступа
 function initAccessButtons() {
     document.querySelectorAll('.access-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -348,159 +289,138 @@ function initAccessButtons() {
     });
 }
 
-// Поиск по разделу
+async function performSearch() {
+    const searchInput = document.getElementById('search-input');
+    const searchTerm = searchInput ? searchInput.value : '';
+    
+    console.log('Performing search for:', searchTerm, 'tag:', currentTag);
+    
+    try {
+        // Try API first
+        currentResults = await searchShadowrun(searchTerm, currentTag);
+    } catch (error) {
+        console.error('Search failed:', error);
+        // Fallback to local search
+        currentResults = searchInDemoData(searchTerm, currentTag);
+    }
+    
+    console.log('Search results:', currentResults.length);
+    
+    // Get sort criteria
+    const sortSelect = document.getElementById('sort-results');
+    const sortCriteria = sortSelect ? sortSelect.value : 'relevance';
+    
+    sortResults(sortCriteria);
+    renderResults();
+    updateResultsCount();
+}
+
 function searchBySection(section) {
-    // Устанавливаем соответствующий тег
     let tag = '';
     
     switch(section) {
-        case 'char-creation':
-            tag = 'персонажи';
-            break;
-        case 'attributes':
-            tag = 'атрибуты';
-            break;
-        case 'skills':
-            tag = 'навыки';
-            break;
-        case 'races':
-            tag = 'расы';
-            break;
-        case 'archetypes':
-            tag = 'архетипы';
-            break;
-        default:
-            tag = 'all';
+        case 'char-creation': tag = 'Characters'; break;
+        case 'attributes': tag = 'Characters'; break;
+        case 'skills': tag = 'Game Mechanics'; break;
+        case 'races': tag = 'Metahumans'; break;
+        case 'archetypes': tag = 'Characters'; break;
+        default: tag = 'all';
     }
     
-    // Активируем соответствующий тег
+    // Update tag buttons
     document.querySelectorAll('.tag-btn').forEach(b => {
         b.classList.remove('active');
-        if (b.getAttribute('data-tag') === tag) {
+        if (b.getAttribute('data-tag') === tag || 
+            (tag === 'all' && b.getAttribute('data-tag') === 'all')) {
             b.classList.add('active');
         }
     });
     
-    // Обновляем текущий тег
     currentTag = tag;
-    
-    // Выполняем поиск
     performSearch();
 }
 
-// Основная функция поиска
-function performSearch() {
-    const searchInput = document.getElementById('search-input');
-    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    // Фильтруем данные
-    currentResults = shadowrunData.filter(entry => {
-        // Фильтр по тегу
-        if (currentTag !== 'all' && !entry.tags.includes(currentTag)) {
-            return false;
-        }
-        
-        // Если поисковой запрос пустой, показываем все по тегу
-        if (!searchTerm.trim()) {
-            return true;
-        }
-        
-        // Поиск по заголовку, описанию и тегам
-        return entry.title.toLowerCase().includes(searchTerm) ||
-               entry.description.toLowerCase().includes(searchTerm) ||
-               entry.tags.some(tag => tag.toLowerCase().includes(searchTerm)) ||
-               entry.category.toLowerCase().includes(searchTerm);
-    });
-    
-    // Сортируем результаты
-    sortResults(document.getElementById('sort-results')?.value || 'relevance');
-    
-    // Отображаем результаты
-    renderResults();
-    
-    // Обновляем статистику
-    updateResultsCount();
-}
-
-// Сортировка результатов
 function sortResults(criteria) {
     switch(criteria) {
         case 'title':
             currentResults.sort((a, b) => a.title.localeCompare(b.title));
             break;
         case 'category':
-            currentResults.sort((a, b) => a.category.localeCompare(b.category));
+            currentResults.sort((a, b) => {
+                const catA = a.category || '';
+                const catB = b.category || '';
+                return catA.localeCompare(catB);
+            });
             break;
         case 'relevance':
         default:
-            // По умолчанию - по ID (как в массиве)
-            currentResults.sort((a, b) => a.id - b.id);
+            currentResults.sort((a, b) => (a.id || 0) - (b.id || 0));
             break;
     }
     
     renderResults();
 }
 
-// Отображение результатов
 function renderResults() {
     const container = document.getElementById('results-container');
     const titleElement = document.getElementById('results-title');
     
     if (!container) return;
     
-    // Обновляем заголовок
+    // Update title
     if (titleElement) {
         const searchInput = document.getElementById('search-input');
         const searchTerm = searchInput ? searchInput.value : '';
         
         if (searchTerm.trim()) {
-            titleElement.textContent = `Результаты поиска: "${searchTerm}"`;
+            titleElement.textContent = `Search results: "${searchTerm}"`;
         } else if (currentTag !== 'all') {
-            const activeTag = document.querySelector('.tag-btn.active');
-            const tagName = activeTag ? activeTag.textContent : currentTag;
-            titleElement.textContent = `Категория: ${tagName}`;
+            titleElement.textContent = `Category: ${currentTag}`;
         } else {
-            titleElement.textContent = 'Все записи';
+            titleElement.textContent = 'All entries';
         }
     }
     
-    // Очищаем контейнер
     container.innerHTML = '';
     
-    // Если нет результатов
     if (currentResults.length === 0) {
         container.innerHTML = `
             <div class="no-results">
                 <i class="fas fa-search fa-3x"></i>
-                <h4>Ничего не найдено</h4>
-                <p>Попробуйте изменить поисковый запрос или выбрать другую категорию</p>
+                <h4>No results found</h4>
+                <p>Try changing your search query or select another category</p>
             </div>
         `;
         return;
     }
     
-    // Отображаем результаты
     currentResults.forEach(entry => {
         const card = document.createElement('div');
         card.className = `result-card ${selectedEntry === entry.id ? 'selected' : ''}`;
         card.setAttribute('data-id', entry.id);
         
-        // Создаём теги
-        const tagsHTML = entry.tags.map(tag => 
+        // Handle tags (could be string or array)
+        let tagsArray = [];
+        if (typeof entry.tags === 'string') {
+            tagsArray = entry.tags.split(',').map(t => t.trim());
+        } else if (Array.isArray(entry.tags)) {
+            tagsArray = entry.tags;
+        }
+        
+        const tagsHTML = tagsArray.map(tag => 
             `<span class="result-tag">${tag}</span>`
         ).join('');
         
         card.innerHTML = `
             <div class="result-title">
                 <i class="fas fa-file-alt"></i>
-                ${entry.title}
-                <span class="result-category">${entry.category}</span>
+                ${entry.title || 'Untitled'}
+                <span class="result-category">${entry.category || 'Uncategorized'}</span>
             </div>
-            <div class="result-description">${entry.description}</div>
+            <div class="result-description">${entry.description || 'No description'}</div>
             <div class="result-tags">${tagsHTML}</div>
         `;
         
-        // Обработчик клика
         card.addEventListener('click', function() {
             selectEntry(entry.id);
         });
@@ -509,75 +429,84 @@ function renderResults() {
     });
 }
 
-// Выбор записи
 function selectEntry(entryId) {
-    const entry = shadowrunData.find(e => e.id === entryId);
-    if (!entry) return;
+    console.log('Selecting entry:', entryId);
     
-    // Обновляем выбранную запись
+    // Try to find entry in current results first
+    let entry = currentResults.find(e => e.id == entryId);
+    
+    // If not found, try in all data
+    if (!entry) {
+        entry = shadowrunData.find(e => e.id == entryId);
+    }
+    
+    if (!entry) {
+        console.error('Entry not found:', entryId);
+        return;
+    }
+    
     selectedEntry = entryId;
     
-    // Обновляем стиль карточек
+    // Update selected state in UI
     document.querySelectorAll('.result-card').forEach(card => {
         card.classList.remove('selected');
-        if (parseInt(card.getAttribute('data-id')) === entryId) {
+        if (parseInt(card.getAttribute('data-id')) == entryId) {
             card.classList.add('selected');
         }
     });
     
-    // Отображаем детали
     showEntryDetails(entry);
-    
-    // Добавляем в недавние
     addToRecent(entry);
 }
 
-// Отображение деталей записи
 function showEntryDetails(entry) {
     const detailsContainer = document.getElementById('details-content');
     const placeholder = document.querySelector('.details-placeholder');
     
     if (!detailsContainer) return;
     
-    // Скрываем заглушку, показываем контент
     if (placeholder) placeholder.style.display = 'none';
     detailsContainer.style.display = 'block';
     
-    // Формируем теги
-    const tagsHTML = entry.tags.map(tag => 
+    // Handle tags (could be string or array)
+    let tagsArray = [];
+    if (typeof entry.tags === 'string') {
+        tagsArray = entry.tags.split(',').map(t => t.trim());
+    } else if (Array.isArray(entry.tags)) {
+        tagsArray = entry.tags;
+    }
+    
+    const tagsHTML = tagsArray.map(tag => 
         `<span class="result-tag">${tag}</span>`
     ).join('');
     
-    // Заполняем детали
     detailsContainer.innerHTML = `
         <div class="details-header">
-            <h3><i class="fas fa-scroll"></i> ${entry.title}</h3>
+            <h3><i class="fas fa-scroll"></i> ${entry.title || 'Untitled'}</h3>
             <div class="details-meta">
-                <span><i class="fas fa-tag"></i> ${entry.category}</span>
-                <span><i class="fas fa-hashtag"></i> ID: ${entry.id}</span>
+                <span><i class="fas fa-tag"></i> ${entry.category || 'Uncategorized'}</span>
+                <span><i class="fas fa-hashtag"></i> ID: ${entry.id || 'N/A'}</span>
+                ${entry.views !== undefined ? `<span><i class="fas fa-eye"></i> Views: ${entry.views}</span>` : ''}
             </div>
             <div class="result-tags">${tagsHTML}</div>
         </div>
         <div class="details-body">
-            ${entry.content}
+            ${entry.content || entry.description || 'No content available'}
         </div>
     `;
     
-    // Прокручиваем вверх деталей
     detailsContainer.scrollTop = 0;
 }
 
-// Добавление в недавние
 function addToRecent(entry) {
-    // Проверяем, есть ли уже эта запись в недавних
+    // Remove if already exists
     const index = recentEntries.findIndex(e => e.id === entry.id);
     
-    // Если есть, удаляем старую запись
     if (index !== -1) {
         recentEntries.splice(index, 1);
     }
     
-    // Добавляем в начало
+    // Add to beginning
     recentEntries.unshift({
         id: entry.id,
         title: entry.title,
@@ -585,22 +514,20 @@ function addToRecent(entry) {
         timestamp: new Date()
     });
     
-    // Ограничиваем до 5 записей
+    // Keep only last 5
     if (recentEntries.length > 5) {
         recentEntries.pop();
     }
     
-    // Обновляем отображение недавних
     updateRecentEntries();
 }
 
-// Обновление недавних записей
 function updateRecentEntries() {
     const container = document.getElementById('recent-entries');
     if (!container) return;
     
     if (recentEntries.length === 0) {
-        container.innerHTML = '<div class="no-recent"><p>Пока нет недавних записей</p></div>';
+        container.innerHTML = '<div class="no-recent"><p>No recent entries yet</p></div>';
         return;
     }
     
@@ -612,8 +539,9 @@ function updateRecentEntries() {
         element.setAttribute('data-id', entry.id);
         
         element.innerHTML = `
-            <div class="recent-entry-title">${entry.title}</div>
-            <div class="recent-entry-category">${entry.category}</div>
+            <div class="recent-entry-title">${entry.title || 'Untitled'}</div>
+            <div class="recent-entry-category">${entry.category || 'Uncategorized'}</div>
+            <div class="recent-entry-time">${formatTimeAgo(entry.timestamp)}</div>
         `;
         
         element.addEventListener('click', function() {
@@ -624,13 +552,13 @@ function updateRecentEntries() {
     });
 }
 
-// Показать демо-результаты
 function showDemoResults() {
-    // Показываем все записи
+    console.log('Showing demo results');
     currentResults = [...shadowrunData];
     renderResults();
+    updateResultsCount();
     
-    // Выбираем первую запись
+    // Select first entry if available
     if (shadowrunData.length > 0) {
         setTimeout(() => {
             selectEntry(shadowrunData[0].id);
@@ -638,7 +566,6 @@ function showDemoResults() {
     }
 }
 
-// Обновление счётчика записей
 function updateEntriesCount() {
     const countElement = document.getElementById('entries-count');
     if (countElement) {
@@ -646,15 +573,49 @@ function updateEntriesCount() {
     }
 }
 
-// Обновление счётчика результатов
 function updateResultsCount() {
     const countElement = document.getElementById('results-count');
     if (countElement) {
-        countElement.textContent = `${currentResults.length} результатов`;
+        countElement.textContent = `${currentResults.length} results`;
     }
 }
 
-// Вспомогательные функции
-function formatDate(date) {
-    return date.toLocaleDateString('ru-RU');
+function formatTimeAgo(date) {
+    if (!date) return '';
+    
+    const now = new Date();
+    const diffMs = now - new Date(date);
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return new Date(date).toLocaleDateString();
 }
+
+// Helper function to get entry by ID
+function getEntryById(id) {
+    // Try current results first
+    let entry = currentResults.find(e => e.id == id);
+    
+    // Try all data
+    if (!entry) {
+        entry = shadowrunData.find(e => e.id == id);
+    }
+    
+    return entry;
+}
+
+// Экспорт функций для использования в консоли
+window.ShadowrunAPI = {
+    loadShadowrunData,
+    searchShadowrun,
+    selectEntry,
+    performSearch,
+    getEntryById,
+    showDemoResults
+};

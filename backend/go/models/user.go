@@ -7,32 +7,18 @@ import (
 )
 
 type User struct {
-	ID          uint           `json:"id" gorm:"primaryKey"`
-	Username    string         `json:"username" gorm:"unique;not null"`
-	Password    string         `json:"-" gorm:"not null"`
-	Email       string         `json:"email" gorm:"unique"`
-	StorageUsed int64          `json:"storage_used" gorm:"default:0"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
-}
+	ID           uint           `gorm:"primaryKey" json:"id"`
+	Username     string         `gorm:"size:100;uniqueIndex;not null" json:"username"`
+	Email        string         `gorm:"size:255;uniqueIndex;not null" json:"email"`
+	Password     string         `gorm:"size:255;not null" json:"-"`
+	StorageUsed  int64          `gorm:"default:0" json:"storage_used"`
+	StorageQuota int64          `gorm:"default:52428800" json:"storage_quota"` // 50MB = 50 * 1024 * 1024
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
-type RegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	Password string `json:"password" binding:"required,min=6"`
-	Email    string `json:"email" binding:"required,email"`
-}
-
-type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-}
-
-type UserResponse struct {
-	ID           uint      `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	StorageUsed  int64     `json:"storage_used"`
-	StorageQuota int64     `json:"storage_quota"`
-	CreatedAt    time.Time `json:"created_at"`
+	// Связи
+	Tasks   []Task   `gorm:"foreignKey:UserID" json:"tasks,omitempty"`
+	Files   []File   `gorm:"foreignKey:UserID" json:"files,omitempty"`
+	Scripts []Script `gorm:"foreignKey:UserID" json:"scripts,omitempty"`
 }
