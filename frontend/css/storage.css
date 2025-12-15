@@ -1,0 +1,494 @@
+/* storage.css - специфичные стили для страницы хранилища */
+
+/* Поддержка старых классов */
+.storage-main, .main-container {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: 1fr;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 30px;
+    min-height: calc(100vh - 140px);
+    height: 100%;
+}
+
+.storage-sidebar, .sidebar {
+    background: rgba(25, 40, 25, 0.9);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
+
+.storage-workspace, .workspace {
+    background: rgba(35, 50, 35, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.storage-stats, .stats-panel {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: rgba(30, 50, 30, 0.8);
+    padding: 10px 25px;
+    border-radius: 12px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+}
+
+/* Контейнер файлов */
+.files-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    max-height: calc(100vh - 250px);
+    padding-right: 5px;
+}
+
+/* Папки в списке */
+.folder-item-large {
+    background: rgba(50, 70, 50, 0.9);
+    border: 1px solid rgba(120, 180, 120, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s;
+}
+
+.folder-item-large:hover {
+    background: rgba(60, 85, 60, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.folder-icon {
+    color: #ffd28a;
+    min-width: 50px;
+    text-align: center;
+}
+
+.folder-info {
+    flex: 1;
+}
+
+.folder-name {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+}
+
+.folder-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 13px;
+    color: #b0d0b0;
+}
+
+.folder-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.folder-actions {
+    display: flex;
+    gap: 5px;
+    min-width: 80px;
+    justify-content: flex-end;
+}
+
+/* Файлы в списке */
+.file-item {
+    background: rgba(50, 70, 50, 0.9);
+    border: 1px solid rgba(120, 180, 120, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: all 0.3s;
+}
+
+.file-item:hover {
+    background: rgba(60, 85, 60, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.file-icon {
+    color: #8ab08a;
+    min-width: 40px;
+    text-align: center;
+}
+
+.file-info {
+    flex: 1;
+}
+
+.file-name {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+}
+
+.file-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 13px;
+    color: #b0d0b0;
+}
+
+.file-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 5px;
+    min-width: 120px;
+    justify-content: flex-end;
+}
+
+/* Кнопки файлов */
+.file-btn {
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    border-radius: 6px;
+    color: #b0d0b0;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.file-btn:hover {
+    background: rgba(100, 150, 100, 0.2);
+    color: #fff;
+}
+
+.download-btn:hover {
+    color: #8ab08a;
+}
+
+.rename-btn:hover {
+    color: #ffd28a;
+}
+
+.delete-btn:hover {
+    color: #ff8a8a;
+}
+
+/* Прогресс бар */
+.storage-progress {
+    margin-top: 10px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: rgba(40, 60, 40, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6a8c6a, #8ab08a);
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #b0d0b0;
+}
+
+/* Представление в виде сетки */
+.files-container.grid-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.files-container.grid-view .folder-item-large,
+.files-container.grid-view .file-item {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+}
+
+.files-container.grid-view .folder-icon,
+.files-container.grid-view .file-icon {
+    margin-bottom: 10px;
+}
+
+.files-container.grid-view .folder-info,
+.files-container.grid-view .file-info {
+    width: 100%;
+}
+
+.files-container.grid-view .folder-meta,
+.files-container.grid-view .file-meta {
+    flex-direction: column;
+    gap: 5px;
+}
+
+.files-container.grid-view .folder-actions,
+.files-container.grid-view .file-actions {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+/* Загрузка файлов */
+#upload-placeholder {
+    text-align: center;
+    padding: 30px;
+    border: 2px dashed rgba(100, 150, 100, 0.5);
+    border-radius: 10px;
+    background: rgba(40, 60, 40, 0.3);
+}
+
+#upload-placeholder p {
+    color: #d0e0d0;
+    margin-bottom: 15px;
+}
+
+#file-upload-input {
+    padding: 10px;
+    background: rgba(40, 60, 40, 0.8);
+    border: 1px solid rgba(100, 150, 100, 0.5);
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    width: 100%;
+}
+
+.upload-progress {
+    margin-top: 15px;
+}
+
+.progress-item {
+    background: rgba(50, 70, 50, 0.8);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+}
+
+.progress-item-name {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #d0e0d0;
+}
+
+.progress-item-bar {
+    height: 6px;
+    background: rgba(40, 60, 40, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-item-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6a8c6a, #8ab08a);
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+/* Папки в сайдбаре */
+#folders-list {
+    margin-bottom: 15px;
+}
+
+.folder-item {
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    background: rgba(35, 55, 35, 0.7);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.folder-item:hover {
+    background: rgba(45, 70, 45, 0.8);
+}
+
+.folder-item.active {
+    background: rgba(60, 100, 60, 0.8);
+}
+
+.folder-item i {
+    color: #8ab08a;
+}
+
+.folder-item span:first-of-type {
+    flex: 1;
+    color: #d0e0d0;
+}
+
+.folder-count {
+    background: rgba(60, 100, 60, 0.8);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+.folder-btn {
+    padding: 8px 12px;
+    background: rgba(40, 60, 40, 0.7);
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    border-radius: 6px;
+    color: #b0d0b0;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.folder-btn:hover {
+    background: rgba(60, 85, 60, 0.9);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.open-btn:hover {
+    background: rgba(80, 120, 80, 0.9);
+    color: #8aff8a;
+    border-color: #8aff8a;
+}
+
+.delete-btn:hover {
+    background: rgba(120, 60, 60, 0.9);
+    color: #ff8a8a;
+    border-color: #ff8a8a;
+}
+
+/* Для файловых кнопок - аналогично */
+.file-btn {
+    padding: 8px 12px;
+    background: rgba(40, 60, 40, 0.7);
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    border-radius: 6px;
+    color: #b0d0b0;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.file-btn:hover {
+    background: rgba(60, 85, 60, 0.9);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.download-btn:hover {
+    background: rgba(70, 110, 70, 0.9);
+    color: #8ab08a;
+    border-color: #8ab08a;
+}
+
+.rename-btn:hover {
+    background: rgba(100, 100, 70, 0.9);
+    color: #ffd28a;
+    border-color: #ffd28a;
+}
+
+/* Стили для сайдбара (фиксим внешний вид) */
+.sidebar-section h3 {
+    color: #d0e0d0;
+    font-size: 16px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-btn {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    background: rgba(40, 60, 40, 0.7);
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    color: #d0e0d0;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.sidebar-btn:hover {
+    background: rgba(50, 80, 50, 0.8);
+    color: #fff;
+}
+
+.sidebar-btn.active {
+    background: rgba(60, 100, 60, 0.9);
+    color: #fff;
+    border-color: #6a8c6a;
+}
+
+.sidebar-btn.primary {
+    background: rgba(70, 120, 70, 0.9);
+    border-color: #8ab08a;
+    color: #fff;
+    font-weight: 500;
+}
+
+.sidebar-btn.primary:hover {
+    background: rgba(80, 140, 80, 0.9);
+}
+/* Адаптивность */
+@media (max-width: 800px) {
+    .storage-main, .main-container {
+        flex-direction: column;
+    }
+    
+    .storage-sidebar, .sidebar {
+        width: 100%;
+        position: static;
+        margin-bottom: 20px;
+    }
+    
+    .storage-stats, .stats-panel {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+        padding: 15px;
+    }
+    
+    .stat-separator {
+        display: none;
+    }
+    
+    .files-container.grid-view {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}

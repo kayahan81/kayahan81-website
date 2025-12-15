@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Скрипты | Портфолио</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/common-styles.css">
+    <link rel="stylesheet" href="../../css/scripts.css">
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="green-overlay"></div>
+    
+    <header class="top-panel">
+        <div class="panel-left">
+            <a href="index.html" class="logo">
+                <i class="fas fa-home"></i>
+                <span class="logo-text">Портфолио</span>
+            </a>
+        </div>
+        
+        <div class="panel-center">
+            <div class="stats-panel">
+                <h3><i class="fab fa-golang"></i> Песочница Go</h3>
+            </div>
+        </div>
+        
+        <div class="panel-right">
+            <div class="user-section">
+                <div class="user-icon" id="user-menu-btn" title="Профиль">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="main-content main-container">
+        <div class="workspace">
+            <div class="workspace-header">
+                <h3><i class="fas fa-code"></i> Редактор Go кода</h3>
+                <div class="script-actions">
+                    <button class="action-btn" id="save-script-btn" title="Сохранить скрипт">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                    <button class="action-btn" id="load-script-btn" title="Загрузить скрипт">
+                        <i class="fas fa-folder-open"></i> Загрузить
+                    </button>
+                    <button class="action-btn" id="clear-editor-btn" title="Очистить редактор">
+                        <i class="fas fa-broom"></i> Очистить
+                    </button>
+                </div>
+            </div>
+            
+            <div class="scripts-container">
+                <div class="code-editor">
+                    <div class="editor-header">
+                        <h4><i class="fas fa-code"></i> Введите Go-код:</h4>
+                        <div class="editor-options">
+                            <select id="theme-select" class="select-control" style="font-size: 12px;">
+                                <option value="default">Тема: По умолчанию</option>
+                                <option value="dark">Темная</option>
+                                <option value="light">Светлая</option>
+                            </select>
+                            <select id="font-size-select" class="select-control" style="font-size: 12px;">
+                                <option value="14">Размер шрифта: 14px</option>
+                                <option value="16">16px</option>
+                                <option value="18">18px</option>
+                            </select>
+                        </div>
+                    </div>
+                    <textarea id="go-code" placeholder="package main
+
+import &quot;fmt&quot;
+
+func main() {
+    fmt.Println(&quot;Hello, World!&quot;)
+}"></textarea>
+                    <div class="editor-footer">
+                        <button class="btn btn-primary run-btn" id="run-code-btn">
+                            <i class="fas fa-play"></i> Выполнить код
+                        </button>
+                        <div class="editor-stats">
+                            <span id="line-count">Строк: 0</span>
+                            <span id="char-count">Символов: 0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="output-container">
+                    <div class="output-header">
+                        <h4><i class="fas fa-terminal"></i> Результат выполнения:</h4>
+                        <div class="output-actions">
+                            <button class="action-btn" id="clear-output-btn" title="Очистить вывод">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="action-btn" id="copy-output-btn" title="Копировать вывод">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="output-content" id="output-content">
+                        <div class="output-placeholder">
+                            <i class="fas fa-terminal fa-2x"></i>
+                            <p>Здесь будет вывод вашей программы...</p>
+                            <p class="output-hint">Нажмите "Выполнить код" чтобы запустить программу</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Список сохранённых скриптов -->
+            <div class="saved-scripts">
+                <h4><i class="fas fa-save"></i> Сохранённые скрипты</h4>
+                <div class="scripts-list" id="scripts-list">
+                    <!-- Скрипты будут загружаться через JS -->
+                    <div class="no-scripts">
+                        <i class="fas fa-folder-open fa-2x"></i>
+                        <p>Нет сохранённых скриптов</p>
+                        <p class="output-hint">Сохраните свой первый скрипт</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="footer">
+        <div class="footer-content-left">
+            <p>Система портфолио • 2025 • Разработано в учебных целях</p>
+        </div>
+        <div class="footer-content-right">
+            <p>Контактные данные:  kayahan81@yandex.ru • github/kayahan81</p>
+        </div>
+    </footer>
+    
+    <script src="../../javascript/app.js"></script>
+    <script src="../../javascript/scripts.js"></script>
+</body>
+</html>

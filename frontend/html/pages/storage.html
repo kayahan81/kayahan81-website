@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Хранилище | Портфолио</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/common-styles.css">
+    <link rel="stylesheet" href="../../css/storage.css">
+</head>
+<body>
+    <!-- Фон и оверлей -->
+    <div class="background-image"></div>
+    <div class="green-overlay"></div>
+    
+    <!-- Верхняя панель -->
+    <header class="top-panel">
+        <!-- Левая часть: логотип -->
+        <div class="panel-left">
+            <a href="index.html" class="logo">
+                <i class="fas fa-home"></i>
+                <span class="logo-text">Портфолио</span>
+            </a>
+        </div>
+        
+        <!-- Центральная часть: статистика -->
+        <div class="panel-center">
+            <div class="stats-panel">
+                <div class="stat-item">
+                    <span class="stat-label">Использовано:</span>
+                    <span class="stat-value" id="used-space">0.25 ГБ</span>
+                </div>
+                <span class="stat-separator">•</span>
+                <div class="stat-item">
+                    <span class="stat-label">Доступно:</span>
+                    <span class="stat-value" id="free-space">4.75 ГБ</span>
+                </div>
+                <span class="stat-separator">•</span>
+                <div class="stat-item">
+                    <span class="stat-label">Всего:</span>
+                    <span class="stat-value" id="total-space">20 ГБ</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Правая часть: пользователь -->
+        <div class="panel-right">
+            <div class="user-section">
+                <div class="user-icon" id="user-menu-btn" title="Профиль пользователя">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Основное содержимое -->
+    <main class="main-content main-container">
+        <!-- Левая панель с действиями -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h3><i class="fas fa-filter"></i> Фильтры</h3>
+                <button class="sidebar-btn active" data-filter="all">
+                    <i class="fas fa-file"></i> Все файлы
+                </button>
+                <button class="sidebar-btn" data-filter="images">
+                    <i class="fas fa-image"></i> Изображения
+                </button>
+                <button class="sidebar-btn" data-filter="documents">
+                    <i class="fas fa-file-pdf"></i> Документы
+                </button>
+                <button class="sidebar-btn" data-filter="archives">
+                    <i class="fas fa-file-archive"></i> Архивы
+                </button>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3><i class="fas fa-folder"></i> Папки</h3>
+                <div id="folders-list">
+                    <!-- Папки будут добавляться через JS -->
+                    <div class="folder-item active">
+                        <i class="fas fa-cloud"></i>
+                        <span>Все файлы</span>
+                        <span class="folder-count">12</span>
+                    </div>
+                    <div class="folder-item">
+                        <i class="fas fa-folder"></i>
+                        <span>Работа</span>
+                        <span class="folder-count">5</span>
+                    </div>
+                    <div class="folder-item">
+                        <i class="fas fa-folder"></i>
+                        <span>Личное</span>
+                        <span class="folder-count">3</span>
+                    </div>
+                    <div class="folder-item">
+                        <i class="fas fa-folder"></i>
+                        <span>Проекты</span>
+                        <span class="folder-count">4</span>
+                    </div>
+                </div>
+                <button class="sidebar-btn" id="new-folder-btn">
+                    <i class="fas fa-plus"></i> Новая папка
+                </button>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3><i class="fas fa-cog"></i> Действия</h3>
+                <button class="sidebar-btn primary" id="upload-files-btn">
+                    <i class="fas fa-upload"></i> Загрузить файлы
+                </button>
+                <button class="sidebar-btn" id="create-folder-btn">
+                    <i class="fas fa-folder-plus"></i> Создать папку
+                </button>
+                <button class="sidebar-btn" id="refresh-btn">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3><i class="fas fa-chart-pie"></i> Использование</h3>
+                <div class="storage-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 5%"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span>5% использовано</span>
+                        <span>0.25 ГБ / 5 ГБ</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Основная рабочая область -->
+        <section class="workspace">
+            <!-- Панель управления списком -->
+            <div class="workspace-header">
+                <div class="sort-options">
+                    <span>Сортировка:</span>
+                    <select id="sort-select" class="select-control">
+                        <option value="name">По названию</option>
+                        <option value="date-modified">По дате изменения</option>
+                        <option value="date-created">По дате создания</option>
+                        <option value="size">По размеру</option>
+                        <option value="type">По типу</option>
+                    </select>
+                </div>
+                <div class="view-options">
+                    <button class="view-btn active" data-view="list">
+                        <i class="fas fa-list"></i> Список
+                    </button>
+                    <button class="view-btn" data-view="grid">
+                        <i class="fas fa-th-large"></i> Сетка
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Список файлов и папок -->
+            <div class="common-container files-container" id="files-container">
+                <!-- Папки -->
+                <div class="folder-item-large">
+                    <div class="folder-icon">
+                        <i class="fas fa-folder fa-3x"></i>
+                    </div>
+                    <div class="folder-info">
+                        <h4 class="folder-name">Работа</h4>
+                        <div class="folder-meta">
+                            <span class="folder-items">5 файлов</span>
+                            <span class="folder-date">Изменено: 2 ноя 2024</span>
+                            <span class="folder-size">24.5 МБ</span>
+                        </div>
+                    </div>
+                    <div class="folder-actions">
+                        <button class="folder-btn open-btn" title="Открыть">
+                            <i class="fas fa-folder-open"></i>
+                        </button>
+                        <button class="folder-btn delete-btn" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Файлы -->
+                <div class="file-item">
+                    <div class="file-icon">
+                        <i class="fas fa-file-pdf fa-2x"></i>
+                    </div>
+                    <div class="file-info">
+                        <h4 class="file-name">Отчёт_2024.pdf</h4>
+                        <div class="file-meta">
+                            <span class="file-size">2.4 МБ</span>
+                            <span class="file-date">Создан: 1 ноя 2024</span>
+                            <span class="file-modified">Изменён: 2 ноя 2024</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="action-btn download-btn" title="Скачать">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="action-btn delete-btn" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="action-btn rename-btn" title="Переименовать">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="file-item">
+                    <div class="file-icon">
+                        <i class="fas fa-file-image fa-2x"></i>
+                    </div>
+                    <div class="file-info">
+                        <h4 class="file-name">Фото_отпуска.jpg</h4>
+                        <div class="file-meta">
+                            <span class="file-size">4.2 МБ</span>
+                            <span class="file-date">Создан: 28 окт 2024</span>
+                            <span class="file-modified">Изменён: 30 окт 2024</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="action-btn download-btn" title="Скачать">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="action-btn delete-btn" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="action-btn rename-btn" title="Переименовать">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="file-item">
+                    <div class="file-icon">
+                        <i class="fas fa-file-word fa-2x"></i>
+                    </div>
+                    <div class="file-info">
+                        <h4 class="file-name">Резюме.docx</h4>
+                        <div class="file-meta">
+                            <span class="file-size">0.8 МБ</span>
+                            <span class="file-date">Создан: 25 окт 2024</span>
+                            <span class="file-modified">Изменён: 29 окт 2024</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="action-btn download-btn" title="Скачать">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="action-btn delete-btn" title="Удалить">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <button class="action-btn rename-btn" title="Переименовать">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Модальное окно загрузки файлов -->
+    <div class="modal-overlay" id="upload-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-upload"></i> Загрузка файлов</h3>
+                <button class="modal-close" id="close-upload-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="upload-placeholder">
+                    <p>Выберите файлы для загрузки</p>
+                    <input type="file" id="file-upload-input" multiple>
+                    <div class="upload-progress" id="upload-progress">
+                        <!-- Прогресс загрузки будет здесь -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Подвал -->
+    <footer class="footer">
+        <div class="footer-content-left">
+            <p>Система портфолио • 2025 • Разработано в учебных целях</p>
+        </div>
+        <div class="footer-content-right">
+            <p>Контактные данные:  kayahan81@yandex.ru • github/kayahan81</p>
+        </div>
+    </footer>
+    
+    <script src="../../javascript/app.js"></script>
+    <script src="../../javascript/storage.js"></script>
+</body>
+</html>

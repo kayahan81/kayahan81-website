@@ -1,0 +1,480 @@
+/* shadowrun.css - специфичные стили для страницы Shadowrun 5e */
+
+/* Основной контейнер */
+.main-content {
+    padding: 20px;
+    min-height: calc(100vh - 140px);
+}
+
+/* Панель поиска (на всю ширину) */
+.search-panel {
+    background: rgba(40, 60, 40, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.search-box i {
+    color: #8ab08a;
+    font-size: 20px;
+}
+
+#search-input {
+    flex: 1;
+    padding: 12px 15px;
+    background: rgba(25, 35, 25, 0.9);
+    border: 1px solid rgba(100, 150, 100, 0.5);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+}
+
+#search-input:focus {
+    outline: none;
+    border-color: #8ab08a;
+    background: rgba(30, 40, 30, 0.9);
+}
+
+#search-btn {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-tags {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.filter-label {
+    color: #d0e0d0;
+    font-size: 14px;
+    padding-top: 8px;
+    white-space: nowrap;
+}
+
+.tags-container {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag-btn {
+    padding: 8px 15px;
+    background: rgba(40, 60, 40, 0.7);
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    border-radius: 20px;
+    color: #b0d0b0;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 14px;
+}
+
+.tag-btn:hover {
+    background: rgba(50, 80, 50, 0.8);
+    color: #fff;
+}
+
+.tag-btn.active {
+    background: rgba(70, 120, 70, 0.9);
+    color: #fff;
+    border-color: #8ab08a;
+}
+
+/* Основной контент - сетка 3 колонки */
+.shadowrun-content {
+    display: grid;
+    grid-template-columns: 250px 1fr 850px;
+    gap: 20px;
+    height: calc(100vh - 280px);
+}
+
+/* Быстрый доступ */
+.quick-access {
+    background: rgba(25, 40, 25, 0.9);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.access-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(100, 150, 100, 0.2);
+}
+
+.access-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.access-section h3 {
+    color: #d0e0d0;
+    font-size: 16px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.access-btn {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    background: rgba(40, 60, 40, 0.7);
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    color: #d0e0d0;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.access-btn:hover {
+    background: rgba(50, 80, 50, 0.8);
+    color: #fff;
+}
+
+/* Результаты поиска */
+.search-results {
+    background: rgba(35, 50, 35, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(100, 150, 100, 0.2);
+}
+
+#results-title {
+    color: #fff;
+    margin: 0;
+    font-size: 18px;
+}
+
+.results-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: #b0d0b0;
+    font-size: 14px;
+}
+
+.results-container {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.results-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.results-container::-webkit-scrollbar-track {
+    background: rgba(40, 60, 40, 0.3);
+    border-radius: 4px;
+}
+
+.results-container::-webkit-scrollbar-thumb {
+    background: rgba(100, 150, 100, 0.6);
+    border-radius: 4px;
+}
+
+.results-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(120, 180, 120, 0.8);
+}
+
+/* Карточки результатов */
+.result-card {
+    background: rgba(50, 70, 50, 0.9);
+    border: 1px solid rgba(120, 180, 120, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.result-card:hover {
+    background: rgba(60, 85, 60, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.result-card.selected {
+    background: rgba(70, 100, 70, 0.95);
+    border-color: #8ab08a;
+}
+
+.result-title {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.result-category {
+    display: inline-block;
+    padding: 3px 8px;
+    background: rgba(70, 120, 70, 0.7);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.result-description {
+    color: #d0e0d0;
+    font-size: 14px;
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.result-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.result-tag {
+    padding: 2px 6px;
+    background: rgba(40, 60, 40, 0.7);
+    border-radius: 3px;
+    color: #b0d0b0;
+    font-size: 11px;
+}
+
+/* Заглушка без результатов */
+.no-results {
+    text-align: center;
+    padding: 50px 20px;
+    color: #8ab08a;
+}
+
+.no-results i {
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.no-results h4 {
+    margin: 10px 0;
+    color: #fff;
+}
+
+.no-results p {
+    color: #b0d0b0;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Недавние записи */
+#recent-entries {
+    min-height: 100px;
+}
+
+.no-recent {
+    text-align: center;
+    padding: 20px;
+    color: #6a8c6a;
+    font-size: 14px;
+}
+
+.recent-entry {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: rgba(40, 60, 40, 0.7);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.recent-entry:hover {
+    background: rgba(50, 80, 50, 0.8);
+}
+
+.recent-entry-title {
+    color: #fff;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.recent-entry-category {
+    color: #b0d0b0;
+    font-size: 12px;
+}
+
+/* Детали записи */
+.entry-details {
+    background: rgba(25, 40, 25, 0.9);
+    border-radius: 15px;
+    padding: 20px;
+    border: 1px solid rgba(100, 150, 100, 0.3);
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
+}
+
+.details-placeholder {
+    text-align: center;
+    padding: 60px 20px;
+    color: #8ab08a;
+}
+
+.details-placeholder i {
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.details-placeholder h4 {
+    margin: 10px 0;
+    color: #fff;
+}
+
+.details-placeholder p {
+    color: #b0d0b0;
+}
+
+/* Контент деталей */
+.details-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.details-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(100, 150, 100, 0.2);
+}
+
+.details-header h3 {
+    color: #fff;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.details-meta {
+    display: flex;
+    gap: 15px;
+    color: #b0d0b0;
+    font-size: 13px;
+}
+
+.details-body {
+    color: #d0e0d0;
+    line-height: 1.6;
+}
+
+.details-body p {
+    margin-bottom: 15px;
+}
+
+.details-body ul, .details-body ol {
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.details-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    background: rgba(30, 45, 30, 0.7);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.details-body th {
+    background: rgba(40, 60, 40, 0.9);
+    color: #fff;
+    padding: 10px;
+    text-align: left;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(100, 150, 100, 0.3);
+}
+
+.details-body td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(100, 150, 100, 0.2);
+    color: #d0e0d0;
+}
+
+.details-body tr:last-child td {
+    border-bottom: none;
+}
+
+.details-body code {
+    background: rgba(40, 60, 40, 0.7);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #ffd28a;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+    .shadowrun-content {
+        grid-template-columns: 1fr;
+        height: auto;
+        gap: 15px;
+    }
+    
+    .quick-access, .entry-details {
+        min-height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-box {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    #search-input {
+        width: 100%;
+    }
+    
+    .filter-tags {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .tags-container {
+        width: 100%;
+    }
+    
+    .results-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}

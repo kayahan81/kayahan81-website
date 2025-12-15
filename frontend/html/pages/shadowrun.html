@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadowrun 5e | Портфолио</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/common-styles.css">
+    <link rel="stylesheet" href="../../css/shadowrun.css">
+</head>
+<body>
+    <div class="background-image"></div>
+    <div class="green-overlay"></div>
+    
+    <header class="top-panel">
+        <div class="panel-left">
+            <a href="index.html" class="logo">
+                <i class="fas fa-home"></i>
+                <span class="logo-text">Портфолио</span>
+            </a>
+        </div>
+        
+        <div class="panel-center">
+            <div class="stats-panel">
+                <div class="stat-item">
+                    <span class="stat-label">Справочник</span>
+                    <span class="stat-value">Shadowrun 5e</span>
+                </div>
+                <span class="stat-separator">•</span>
+                <div class="stat-item">
+                    <span class="stat-label">Записей:</span>
+                    <span class="stat-value" id="entries-count">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel-right">
+            <div class="user-section">
+                <div class="user-icon" id="user-menu-btn" title="Профиль">
+                    <i class="fas fa-user-circle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <main class="main-content">
+        <!-- Панель поиска (на всю ширину) -->
+        <div class="search-panel">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Поиск по справочнику...">
+                <button class="btn btn-primary" id="search-btn">
+                    <i class="fas fa-search"></i> Найти
+                </button>
+            </div>
+            
+            <div class="filter-tags">
+                <span class="filter-label">Теги:</span>
+                <div class="tags-container">
+                    <button class="tag-btn active" data-tag="all">Все</button>
+                    <button class="tag-btn" data-tag="персонажи">Персонажи</button>
+                    <button class="tag-btn" data-tag="навыки">Навыки</button>
+                    <button class="tag-btn" data-tag="магия">Магия</button>
+                    <button class="tag-btn" data-tag="технологии">Технологии</button>
+                    <button class="tag-btn" data-tag="боевка">Боевая система</button>
+                    <button class="tag-btn" data-tag="оборудование">Оборудование</button>
+                    <button class="tag-btn" data-tag="правила">Правила</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Основной контент в виде сетки 3 колонки -->
+        <div class="shadowrun-content">
+            <!-- Левая колонка: Быстрый доступ -->
+            <aside class="quick-access">
+                <div class="access-section">
+                    <h3><i class="fas fa-bolt"></i> Быстрый доступ</h3>
+                    <button class="access-btn" data-section="char-creation">
+                        <i class="fas fa-user-plus"></i> Создание персонажа
+                    </button>
+                    <button class="access-btn" data-section="attributes">
+                        <i class="fas fa-chart-bar"></i> Атрибуты
+                    </button>
+                    <button class="access-btn" data-section="skills">
+                        <i class="fas fa-brain"></i> Навыки
+                    </button>
+                    <button class="access-btn" data-section="races">
+                        <i class="fas fa-users"></i> Расы
+                    </button>
+                    <button class="access-btn" data-section="archetypes">
+                        <i class="fas fa-user-tag"></i> Архетипы
+                    </button>
+                </div>
+                
+                <div class="access-section">
+                    <h3><i class="fas fa-history"></i> Недавние записи</h3>
+                    <div id="recent-entries">
+                        <!-- Недавние записи будут здесь -->
+                        <div class="no-recent">
+                            <p>Пока нет недавних записей</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- Центральная колонка: Результаты поиска -->
+            <section class="search-results">
+                <div class="results-header">
+                    <h3 id="results-title">Результаты поиска</h3>
+                    <div class="results-info">
+                        <span id="results-count">0 результатов</span>
+                        <select id="sort-results" class="select-control">
+                            <option value="relevance">По релевантности</option>
+                            <option value="title">По названию</option>
+                            <option value="category">По категории</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="results-container" id="results-container">
+                    <!-- Заглушка до поиска -->
+                    <div class="no-results">
+                        <i class="fas fa-book fa-3x"></i>
+                        <h4>Начните поиск</h4>
+                        <p>Введите запрос или выберите тег для просмотра информации по Shadowrun 5e</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Правая колонка: Детали записи -->
+            <aside class="entry-details">
+                <div class="details-placeholder">
+                    <i class="fas fa-scroll fa-3x"></i>
+                    <h4>Выберите запись</h4>
+                    <p>Выберите запись из результатов, чтобы увидеть детальную информацию</p>
+                </div>
+                <!-- Детали будут появляться здесь -->
+                <div class="details-content" id="details-content" style="display: none;"></div>
+            </aside>
+        </div>
+    </main>
+    
+    <!-- УДАЛЯЕМ старую таблицу - она не нужна -->
+    
+    <footer class="footer">
+        <div class="footer-content-left">
+            <p>Система портфолио • 2025 • Разработано в учебных целях</p>
+        </div>
+        <div class="footer-content-right">
+            <p>Контактные данные:  kayahan81@yandex.ru • github/kayahan81</p>
+        </div>
+    </footer>
+    
+    <script src="../../javascript/app.js"></script>
+    <script src="../../javascript/shadowrun.js"></script>
+</body>
+</html>
